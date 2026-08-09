@@ -5,6 +5,7 @@ but reorganizes it into API, DB, model, repository, schema, service, and utility
 
 ## Structure
 
+
 ```text
 app/
 ├── main.py
