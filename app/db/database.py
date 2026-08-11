@@ -1,36 +1,82 @@
-from collections.abc import Generator
+"""
+Database connection and session management.
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+Supports SQLite (development) and can be switched to PostgreSQL or SQL Server
+by changing DATABASE_URL in the .env file without modifying any other code.
+"""
 
-DATABASE_URL = "sqlite:///./pager.db"
+import os
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from typing import Generator
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL", "sqlite:///./national_one_pager.db"
+)
+
+# Future GCP PostgreSQL connection string (set via environment):
+# DATABASE_URL=postgresql+psycopg2://user:password@/dbname?host=/cloudsql/project:region:instance
+#
+# Future SQL Server connection string:
+# DATABASE_URL=mssql+pyodbc://user:password@host:1433/dbname?driver=ODBC+Driver+17+for+SQL+Server
+
+# ---------------------------------------------------------------------------
+# Engine
+# ---------------------------------------------------------------------------
+
+connect_args: dict = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args=connect_args,
+    echo=False,  # Set to True for SQL debugging
 )
 
+# Enable WAL mode for SQLite (better concurrent reads)
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
+
+# ---------------------------------------------------------------------------
+# Session
+# ---------------------------------------------------------------------------
+
 SessionLocal = sessionmaker(
-    bind=engine,
-    autoflush=False,
     autocommit=False,
+    autoflush=False,
+    bind=engine,
 )
+
+# ---------------------------------------------------------------------------
+# Base
+# ---------------------------------------------------------------------------
 
 
 class Base(DeclarativeBase):
     pass
 
 
-def get_db() -> Generator[Session, None, None]:
+# ---------------------------------------------------------------------------
+# Dependency
+# ---------------------------------------------------------------------------
+
+
+def get_db() -> Generator:
+    """
+    FastAPI dependency that provides a database session per request.
+    Automatically closes the session when the request is done.
+    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-
-def create_tables() -> None:
-    # Import models before create_all so SQLAlchemy knows every table.
-    from app.db.models import pager, pager_pillar_initiative  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)

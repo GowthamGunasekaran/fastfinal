@@ -1,109 +1,93 @@
+"""
+Pydantic v2 schemas for Pager.
+
+IMPORTANT: field `region` is used (not `retailer`).
+Fields: market, region, channel, category, campaign_focus
+"""
+
 from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-from app.schemas.pager_pillar_initiative_schema import (
-    InitiativeIn,
-    InitiativeUpdate,
-    PillarIn,
-    PillarUpdate,
-)
+from app.utils.enums import ScoringMode, PagerStatus
+from app.schemas.pillar_schema import PillarCreate, PillarUpdate, PillarOut
 
 
 class PagerCreate(BaseModel):
-    market: str | None = None
-    category: str | None = None
-    campaign_focus: str | None = None
-    channel: str | None = None
     title: str
-    business_outcome_statement: str | None = None
-    scoring_mode: str = "UNWEIGHTED"
-    status: str = "DRAFT"
-    created_by: str
-    pillars: list[PillarIn] = Field(default_factory=list, max_length=5)
-
-    @field_validator("pillars")
-    @classmethod
-    def validate_pillars(cls, value):
-        numbers = [item.pillar_number for item in value]
-        if len(numbers) != len(set(numbers)):
-            raise ValueError("pillar_number must be unique within a pager.")
-        return value
+    market: Optional[str] = None
+    region: Optional[str] = None
+    channel: Optional[str] = None
+    category: Optional[str] = None
+    campaign_focus: Optional[str] = None
+    business_outcome_statement: Optional[str] = None
+    scoring_mode: ScoringMode = ScoringMode.UNWEIGHTED
+    status: PagerStatus = PagerStatus.DRAFT
+    track: Optional[str] = None
+    pager_type: Optional[str] = None
+    created_by: Optional[str] = None
+    pillars: Optional[List[PillarCreate]] = Field(default_factory=list)
 
 
 class PagerUpdate(BaseModel):
-    market: str | None = None
-    category: str | None = None
-    campaign_focus: str | None = None
-    channel: str | None = None
-    title: str | None = None
-    business_outcome_statement: str | None = None
-    scoring_mode: str | None = None
-    status: str | None = None
-    updated_by: str
-    pillars: list[PillarUpdate] | None = Field(default=None, max_length=5)
+    """PATCH payload — all fields optional."""
+    title: Optional[str] = None
+    market: Optional[str] = None
+    region: Optional[str] = None
+    channel: Optional[str] = None
+    category: Optional[str] = None
+    campaign_focus: Optional[str] = None
+    business_outcome_statement: Optional[str] = None
+    scoring_mode: Optional[ScoringMode] = None
+    track: Optional[str] = None
+    pager_type: Optional[str] = None
+    updated_by: Optional[str] = None
+    pillars: Optional[List[PillarUpdate]] = None
 
-    @field_validator("pillars")
-    @classmethod
-    def validate_pillars(cls, value):
-        if value is None:
-            return value
-        numbers = [item.pillar_number for item in value]
-        if len(numbers) != len(set(numbers)):
-            raise ValueError("pillar_number must be unique within a pager.")
-        return value
 
-class InitiativeOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    pillar_initiative_id: int
-    initiative_id: str
-    initiative_number: int
-    priority_level: str | None
-    accountable_function_department: str | None
-    initiative_description: str | None
-    kpi_metric: str | None
-    success_target: str | None
-    unit: str | None
-    week_start: str | None
-    week_end: str | None
-    guidelines: str | None
-    checklist_compliance_notes: str | None
-    image_urls: list[str]
-    status: str
-class PillarOut(BaseModel):
-    pillar_id: str
-    pillar_number: int
-    pillar_name: str | None
-    pillar_description: str | None
-    pillar_weight: float | None
-    initiatives: list[InitiativeOut]
+class StatusUpdate(BaseModel):
+    status: PagerStatus
+    updated_by: Optional[str] = None
 
 
 class PagerOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    pager_id: int
-    market: str | None
-    category: str | None
-    campaign_focus: str | None
-    channel: str | None
+    pager_id: str
     title: str
-    business_outcome_statement: str | None
-    scoring_mode: str
-    status: str
-    created_at: datetime
-    created_by: str
-    updated_at: datetime
-    updated_by: str
-    pillars: list[PillarOut]
+    market: Optional[str] = None
+    region: Optional[str] = None
+    channel: Optional[str] = None
+    category: Optional[str] = None
+    campaign_focus: Optional[str] = None
+    business_outcome_statement: Optional[str] = None
+    scoring_mode: ScoringMode
+    status: PagerStatus
+    track: Optional[str] = None
+    pager_type: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+    updated_at: Optional[datetime] = None
+    published_by: Optional[str] = None
+    published_at: Optional[datetime] = None
+    pillars: List[PillarOut] = []
+
+    model_config = {"from_attributes": True}
 
 
-class UserPagerSummary(BaseModel):
-    created_by: str
-    total: int
-    draft: int
-    published: int
-    deleted: int
-    archived: int
-    pagers: list[PagerOut]
+class PagerSummary(BaseModel):
+    """Lightweight pager summary without full pillar tree."""
+    pager_id: str
+    title: str
+    market: Optional[str] = None
+    region: Optional[str] = None
+    channel: Optional[str] = None
+    category: Optional[str] = None
+    campaign_focus: Optional[str] = None
+    scoring_mode: ScoringMode
+    status: PagerStatus
+    pager_type: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}

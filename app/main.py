@@ -1,19 +1,79 @@
+"""
+FastAPI application entry point.
+"""
+
+import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from app.api.v1.router import router as v1_router
-from app.db.database import create_tables
+# Load .env file if present
+load_dotenv()
 
-create_tables()
+from app.db.database import engine, Base
+
+# Import all models so SQLAlchemy registers them before create_all
+from app.db.models import Pager, Pillar, PillarInitiative, Metadata  # noqa: F401
+
+from app.api.v1.router import router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan: create tables and seed data on startup.
+    """
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+
+    # Seed development data
+    from app.db.database import SessionLocal
+    from app.db.seed import run_seed
+    db = SessionLocal()
+    try:
+        run_seed(db)
+    finally:
+        db.close()
+
+    yield  # Application runs here
+
+
+# ---------------------------------------------------------------------------
+# FastAPI Application
+# ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="National One-Pager API",
-    version="1.0.0",
-    description="National One-Pager API using FastAPI, SQLAlchemy and SQLite.",
+    title=os.getenv("APP_TITLE", "National One-Pager API"),
+    description=(
+        "Backend API for creating, managing, and publishing National One-Pagers. "
+        "Supports a hierarchical Pager → Pillar → Initiative structure with "
+        "WEIGHTED/UNWEIGHTED scoring modes."
+    ),
+    version=os.getenv("APP_VERSION", "1.0.0"),
+    lifespan=lifespan,
 )
 
-app.include_router(v1_router, prefix="/api/v1")
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------------------------
+# Include router
+# ---------------------------------------------------------------------------
+
+app.include_router(router)
 
 
 @app.get("/health", tags=["Health"])
-def health():
-    return {"status": "ok"}
+def health_check():
+    return {"status": "ok", "service": "National One-Pager API"}

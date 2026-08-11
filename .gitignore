@@ -1,7 +1,39 @@
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
 .venv/
-.venv-1/
+venv/
+env/
+ENV/
+
+# Environment files
 .env
-pager.db
+*.env.local
+
+# SQLite database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
 .pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Distribution
+dist/
+build/
+*.egg-info/

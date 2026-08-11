@@ -1,0 +1,326 @@
+{
+  "title": "National Execution Excellence One-Pager 2026",
+  "market": "India",
+  "region": "South",
+  "channel": "E-Commerce",
+  "category": "Category A",
+  "campaign_focus": "Campaign 2026",
+  "business_outcome_statement": "Improve execution quality and drive sustainable revenue growth across all channels.",
+  "scoring_mode": "WEIGHTED",
+  "status": "DRAFT",
+  "created_by": "user-001",
+  "pager_type": "National",
+  "track": "Track A",
+  "pillars": [
+    {
+      "pillar_number": 1,
+      "pillar_name": "People Excellence",
+      "pillar_description": "Build capability and develop people across the organization.",
+      "pillar_weight": 20,
+      "initiatives": [
+        {
+          "initiative_number": 1,
+          "priority_level": "P1",
+          "accountable_function_department": "HR",
+          "initiative_description": "Capability development program for field teams",
+          "kpi_metric": "Training Completion Rate",
+          "success_target": "95",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Complete monthly training modules by end of month",
+          "checklist_compliance_notes": "Verify attendance and assessment scores",
+          "image_urls": [
+            "https://example.com/images/p1-i1-1.jpg",
+            "https://example.com/images/p1-i1-2.jpg",
+            "https://example.com/images/p1-i1-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 2,
+          "priority_level": "P2",
+          "accountable_function_department": "HR",
+          "initiative_description": "Leadership coaching for senior managers",
+          "kpi_metric": "Coaching Sessions Completed",
+          "success_target": "24",
+          "unit": "Sessions",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "One-on-one sessions with external coaches",
+          "checklist_compliance_notes": "Session feedback forms completed",
+          "image_urls": [
+            "https://example.com/images/p1-i2-1.jpg",
+            "https://example.com/images/p1-i2-2.jpg",
+            "https://example.com/images/p1-i2-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 3,
+          "priority_level": "P3",
+          "accountable_function_department": "L&D",
+          "initiative_description": "Digital skills upskilling for all staff",
+          "kpi_metric": "Digital Certification Achieved",
+          "success_target": "80",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Online platform access provided",
+          "checklist_compliance_notes": "Certificate upload required",
+          "image_urls": [
+            "https://example.com/images/p1-i3-1.jpg",
+            "https://example.com/images/p1-i3-2.jpg",
+            "https://example.com/images/p1-i3-3.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "pillar_number": 2,
+      "pillar_name": "Execution Quality",
+      "pillar_description": "Drive flawless in-store and online execution.",
+      "pillar_weight": 20,
+      "initiatives": [
+        {
+          "initiative_number": 1,
+          "priority_level": "P1",
+          "accountable_function_department": "Sales",
+          "initiative_description": "Perfect store compliance program",
+          "kpi_metric": "Perfect Store Score",
+          "success_target": "90",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Audit against perfect store standards weekly",
+          "checklist_compliance_notes": "Photo evidence required",
+          "image_urls": [
+            "https://example.com/images/p2-i1-1.jpg",
+            "https://example.com/images/p2-i1-2.jpg",
+            "https://example.com/images/p2-i1-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 2,
+          "priority_level": "P1",
+          "accountable_function_department": "Sales",
+          "initiative_description": "New outlet expansion drive",
+          "kpi_metric": "New Outlets Onboarded",
+          "success_target": "500",
+          "unit": "Outlets",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Follow onboarding checklist",
+          "checklist_compliance_notes": "KYC and contract signed",
+          "image_urls": [
+            "https://example.com/images/p2-i2-1.jpg",
+            "https://example.com/images/p2-i2-2.jpg",
+            "https://example.com/images/p2-i2-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 3,
+          "priority_level": "P2",
+          "accountable_function_department": "Operations",
+          "initiative_description": "Planogram compliance audit",
+          "kpi_metric": "Planogram Compliance",
+          "success_target": "95",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Monthly audit by field supervisors",
+          "checklist_compliance_notes": "Photos uploaded to portal",
+          "image_urls": [
+            "https://example.com/images/p2-i3-1.jpg",
+            "https://example.com/images/p2-i3-2.jpg",
+            "https://example.com/images/p2-i3-3.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "pillar_number": 3,
+      "pillar_name": "Customer Engagement",
+      "pillar_description": "Enhance customer experience and satisfaction.",
+      "pillar_weight": 20,
+      "initiatives": [
+        {
+          "initiative_number": 1,
+          "priority_level": "P1",
+          "accountable_function_department": "Marketing",
+          "initiative_description": "Brand visibility and shelf share uplift",
+          "kpi_metric": "Share of Shelf",
+          "success_target": "30",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "POSM placement as per guidelines",
+          "checklist_compliance_notes": "Photographic compliance audit",
+          "image_urls": [
+            "https://example.com/images/p3-i1-1.jpg",
+            "https://example.com/images/p3-i1-2.jpg",
+            "https://example.com/images/p3-i1-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 2,
+          "priority_level": "P2",
+          "accountable_function_department": "CX",
+          "initiative_description": "Customer satisfaction improvement program",
+          "kpi_metric": "NPS Score",
+          "success_target": "70",
+          "unit": "Points",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Monthly NPS survey",
+          "checklist_compliance_notes": "Response rate > 30%",
+          "image_urls": [
+            "https://example.com/images/p3-i2-1.jpg",
+            "https://example.com/images/p3-i2-2.jpg",
+            "https://example.com/images/p3-i2-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 3,
+          "priority_level": "P3",
+          "accountable_function_department": "Marketing",
+          "initiative_description": "Loyalty program enrollment drive",
+          "kpi_metric": "New Loyalty Members",
+          "success_target": "10000",
+          "unit": "Members",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Enroll via app or retailer portal",
+          "checklist_compliance_notes": "Enrollment verified against CRM",
+          "image_urls": [
+            "https://example.com/images/p3-i3-1.jpg",
+            "https://example.com/images/p3-i3-2.jpg",
+            "https://example.com/images/p3-i3-3.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "pillar_number": 4,
+      "pillar_name": "Digital Transformation",
+      "pillar_description": "Accelerate digital initiatives and data-driven decisions.",
+      "pillar_weight": 20,
+      "initiatives": [
+        {
+          "initiative_number": 1,
+          "priority_level": "P1",
+          "accountable_function_department": "IT",
+          "initiative_description": "Digital order management rollout",
+          "kpi_metric": "Digital Orders %",
+          "success_target": "60",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "All orders via digital platform",
+          "checklist_compliance_notes": "Training on platform required",
+          "image_urls": [
+            "https://example.com/images/p4-i1-1.jpg",
+            "https://example.com/images/p4-i1-2.jpg",
+            "https://example.com/images/p4-i1-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 2,
+          "priority_level": "P2",
+          "accountable_function_department": "Analytics",
+          "initiative_description": "Data dashboard adoption across territories",
+          "kpi_metric": "DAU on Dashboard",
+          "success_target": "200",
+          "unit": "Users",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Weekly review of dashboard KPIs",
+          "checklist_compliance_notes": "Login frequency tracked",
+          "image_urls": [
+            "https://example.com/images/p4-i2-1.jpg",
+            "https://example.com/images/p4-i2-2.jpg",
+            "https://example.com/images/p4-i2-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 3,
+          "priority_level": "P3",
+          "accountable_function_department": "IT",
+          "initiative_description": "Mobile app field force adoption",
+          "kpi_metric": "App Usage Rate",
+          "success_target": "85",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "App mandatory for all field visits",
+          "checklist_compliance_notes": "GPS data captured",
+          "image_urls": [
+            "https://example.com/images/p4-i3-1.jpg",
+            "https://example.com/images/p4-i3-2.jpg",
+            "https://example.com/images/p4-i3-3.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "pillar_number": 5,
+      "pillar_name": "Revenue Growth",
+      "pillar_description": "Maximize revenue opportunities across all channels.",
+      "pillar_weight": 20,
+      "initiatives": [
+        {
+          "initiative_number": 1,
+          "priority_level": "P1",
+          "accountable_function_department": "Sales",
+          "initiative_description": "Upsell and cross-sell program",
+          "kpi_metric": "Revenue per Outlet",
+          "success_target": "15000",
+          "unit": "INR",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Bundle offers promoted at POS",
+          "checklist_compliance_notes": "Invoice data verified",
+          "image_urls": [
+            "https://example.com/images/p5-i1-1.jpg",
+            "https://example.com/images/p5-i1-2.jpg",
+            "https://example.com/images/p5-i1-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 2,
+          "priority_level": "P1",
+          "accountable_function_department": "Trade Marketing",
+          "initiative_description": "Premium category push in top accounts",
+          "kpi_metric": "Premium SKU Distribution",
+          "success_target": "75",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Top 500 accounts targeted first",
+          "checklist_compliance_notes": "Distribution scan compliance",
+          "image_urls": [
+            "https://example.com/images/p5-i2-1.jpg",
+            "https://example.com/images/p5-i2-2.jpg",
+            "https://example.com/images/p5-i2-3.jpg"
+          ]
+        },
+        {
+          "initiative_number": 3,
+          "priority_level": "P2",
+          "accountable_function_department": "Finance",
+          "initiative_description": "Route optimization to reduce cost-to-serve",
+          "kpi_metric": "Cost-to-Serve Reduction",
+          "success_target": "10",
+          "unit": "%",
+          "week_start": "2026-08-10",
+          "week_end": "2026-08-31",
+          "guidelines": "Route plans reviewed monthly",
+          "checklist_compliance_notes": "Route efficiency report submitted",
+          "image_urls": [
+            "https://example.com/images/p5-i3-1.jpg",
+            "https://example.com/images/p5-i3-2.jpg",
+            "https://example.com/images/p5-i3-3.jpg"
+          ]
+        }
+      ]
+    }
+  ]
+}

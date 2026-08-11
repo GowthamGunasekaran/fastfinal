@@ -1,64 +1,57 @@
-from sqlalchemy.orm import Session
+"""
+Metadata service — business logic for cascading filter API.
+"""
 
-from app.repositories.metadata_repository import MetadataRepository
-from app.schemas.metadata_schema import (
-    MetadataFilterRequest,
-    MetadataFilterResponse,
-)
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import select, distinct
+
+from app.db.models.metadata import Metadata
+from app.db.models.pager import Pager
+from app.repositories.metadata_repository import metadata_repository
+from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
+from app.utils.enums import PagerStatus
 
 
 class MetadataService:
 
-    def __init__(self, db: Session):
-        self.repository = MetadataRepository(db)
-
-    def get_cascading_metadata(
-        self,
-        payload: MetadataFilterRequest,
+    def get_cascading_filters(
+        self, db: Session, request: MetadataFilterRequest
     ) -> MetadataFilterResponse:
-
-        rows = self.repository.get_filtered_metadata(
-            market=payload.market,
-            retailer=payload.retailer,
-            channel=payload.channel,
-            category=payload.category,
-            campaign=payload.campaign,
+        """
+        Returns distinct values for each metadata dimension
+        filtered by the provided multi-select values.
+        """
+        result = metadata_repository.get_filtered_values(
+            db,
+            market=request.market or [],
+            region=request.region or [],
+            channel=request.channel or [],
+            category=request.category or [],
+            campaign=request.campaign or [],
         )
 
-        markets = sorted({
-            row.market
-            for row in rows
-            if row.market
-        })
-
-        retailers = sorted({
-            row.retailer
-            for row in rows
-            if row.retailer
-        })
-
-        channels = sorted({
-            row.channel
-            for row in rows
-            if row.channel
-        })
-
-        categories = sorted({
-            row.category
-            for row in rows
-            if row.category
-        })
-
-        campaigns = sorted({
-            row.campaign
-            for row in rows
-            if row.campaign
-        })
+        # pager_type and status come from the pager table
+        pager_types = self._get_pager_distinct(db, Pager.pager_type, request.pager_type)
+        statuses = self._get_pager_distinct(db, Pager.status, request.status)
 
         return MetadataFilterResponse(
-            market=markets,
-            retailer=retailers,
-            channel=channels,
-            category=categories,
-            campaign=campaigns,
+            market=result["market"],
+            region=result["region"],
+            channel=result["channel"],
+            category=result["category"],
+            campaign=result["campaign"],
+            pager_type=pager_types,
+            status=statuses,
         )
+
+    def _get_pager_distinct(
+        self, db: Session, column, filter_values: Optional[List[str]]
+    ) -> List[str]:
+        stmt = select(distinct(column)).where(column.isnot(None))
+        if filter_values:
+            stmt = stmt.where(column.in_(filter_values))
+        return sorted(str(v) for v in db.scalars(stmt).all() if v is not None)
+
+
+metadata_service = MetadataService()

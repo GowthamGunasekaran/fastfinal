@@ -1,41 +1,70 @@
-from datetime import datetime
+"""
+SQLAlchemy ORM model for the `pager` table.
+"""
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from datetime import datetime
+from typing import List, Optional
+
+from sqlalchemy import String, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+from app.utils.enums import ScoringMode, PagerStatus
+from app.utils.helpers import generate_uuid, utcnow
 
 
 class Pager(Base):
     __tablename__ = "pager"
 
-    pager_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    market: Mapped[str | None] = mapped_column(String(100))
-    category: Mapped[str | None] = mapped_column(String(100))
-    campaign_focus: Mapped[str | None] = mapped_column(String(200))
-    channel: Mapped[str | None] = mapped_column(String(100))
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
-    business_outcome_statement: Mapped[str | None] = mapped_column(Text)
-
-    scoring_mode: Mapped[str] = mapped_column(String(20), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False)
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.current_timestamp(), nullable=False
+    pager_id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=generate_uuid
     )
-    created_by: Mapped[str] = mapped_column(String(100), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        server_default=func.current_timestamp(),
-        onupdate=func.current_timestamp(),
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Metadata dimensions
+    market: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    channel: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    campaign_focus: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    business_outcome_statement: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+
+    scoring_mode: Mapped[ScoringMode] = mapped_column(
+        SAEnum(ScoringMode, native_enum=False),
         nullable=False,
+        default=ScoringMode.UNWEIGHTED,
     )
-    updated_by: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    pillars: Mapped[list["PagerPillarInitiative"]] = relationship(
-        "PagerPillarInitiative",
+    status: Mapped[PagerStatus] = mapped_column(
+        SAEnum(PagerStatus, native_enum=False),
+        nullable=False,
+        default=PagerStatus.DRAFT,
+    )
+
+    track: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    pager_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # Audit fields
+    created_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=True
+    )
+    updated_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=True
+    )
+    published_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    published_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    pillars: Mapped[List["Pillar"]] = relationship(
+        "Pillar",
         back_populates="pager",
         cascade="all, delete-orphan",
-        order_by="PagerPillarInitiative.pillar_number, PagerPillarInitiative.initiative_number",
+        order_by="Pillar.pillar_number",
     )

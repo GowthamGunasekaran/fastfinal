@@ -1,80 +1,103 @@
+"""
+Repository for Pager database operations.
+
+Follows repository pattern — no business logic, only DB queries.
+IMPORTANT: Methods are named descriptively to avoid shadowing built-in `list`.
+"""
+
+from typing import Optional
+from sqlalchemy.orm import Session
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.db.models.pager import Pager
+from app.db.models.pillar import Pillar
+from app.db.models.pillar_initiative import PillarInitiative
+from app.utils.enums import PagerStatus
+
 
 class PagerRepository:
-    def __init__(self, db: Session):
-        self.db = db
 
-    def add(self, pager: Pager) -> Pager:
-        self.db.add(pager)
-        self.db.flush()
+    def create(self, db: Session, pager: Pager) -> Pager:
+        db.add(pager)
+        db.flush()  # get pager_id without committing
         return pager
 
-    def get_by_id(self, pager_id: int) -> Pager | None:
-        statement = (
+    def get_by_id(self, db: Session, pager_id: str) -> Optional[Pager]:
+        stmt = (
             select(Pager)
-            .options(selectinload(Pager.pillars))
             .where(Pager.pager_id == pager_id)
+            .options(
+                selectinload(Pager.pillars).selectinload(Pillar.initiatives)
+            )
         )
-        return self.db.scalar(statement)
+        return db.scalars(stmt).first()
 
-    def list_pagers(self, status: str | None = None) -> list[Pager]:
-        statement = (
-            select(Pager)
-            .options(selectinload(Pager.pillars))
-            .order_by(Pager.pager_id.desc())
-        )
+    def get_by_id_simple(self, db: Session, pager_id: str) -> Optional[Pager]:
+        """Fetch pager without eager loading relationships."""
+        return db.get(Pager, pager_id)
 
-        if status:
-            statement = statement.where(Pager.status == status)
-
-        return list(self.db.scalars(statement).unique().all())
-
-    def list_by_created_by(
+    def list_pagers(
         self,
-        created_by: str,
-        status: str | None = None,
-    ) -> list[Pager]:
-        statement = (
-            select(Pager)
-            .options(selectinload(Pager.pillars))
-            .where(Pager.created_by == created_by)
-            .order_by(Pager.pager_id.desc())
-        )
-        if status:
-            statement = statement.where(Pager.status == status)
-        return list(self.db.scalars(statement).unique().all())
+        db: Session,
+        status: Optional[PagerStatus] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list:
+        stmt = select(Pager).offset(skip).limit(limit)
+        if status is not None:
+            stmt = stmt.where(Pager.status == status)
+        return list(db.scalars(stmt).all())
 
-    def list_all_by_created_by(self, created_by: str) -> list[Pager]:
-        statement = select(Pager).where(Pager.created_by == created_by)
-        return list(self.db.scalars(statement).all())
-
-    def get_published(
+    def list_published(
         self,
-        market: list[str],
-        region: list[str],
-        channel: list[str],
-        category: list[str],
-        campaign: list[str],
-    ):
-        query = (
+        db: Session,
+        market: Optional[list] = None,
+        region: Optional[list] = None,
+        channel: Optional[list] = None,
+        category: Optional[list] = None,
+        campaign_focus: Optional[list] = None,
+        pager_type: Optional[list] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list:
+        """
+        Fetch PUBLISHED pagers with optional multi-select filters.
+        Uses selectinload to avoid N+1 queries.
+        """
+        stmt = (
             select(Pager)
-            .options(selectinload(Pager.pillars))
-            .where(Pager.status == "PUBLISHED")
+            .where(Pager.status == PagerStatus.PUBLISHED)
+            .options(
+                selectinload(Pager.pillars).selectinload(Pillar.initiatives)
+            )
+            .order_by(Pager.published_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
 
-        filters = {
-            Pager.market: market,
-            Pager.region: region,
-            Pager.channel: channel,
-            Pager.category: category,
-            Pager.campaign: campaign,
-        }
+        if market:
+            stmt = stmt.where(Pager.market.in_(market))
+        if region:
+            stmt = stmt.where(Pager.region.in_(region))
+        if channel:
+            stmt = stmt.where(Pager.channel.in_(channel))
+        if category:
+            stmt = stmt.where(Pager.category.in_(category))
+        if campaign_focus:
+            stmt = stmt.where(Pager.campaign_focus.in_(campaign_focus))
+        if pager_type:
+            stmt = stmt.where(Pager.pager_type.in_(pager_type))
 
-        for column, values in filters.items():
-            if values:
-                query = query.where(column.in_(values))
+        return list(db.scalars(stmt).all())
 
-        return list(self.db.scalars(query).unique().all())
+    def update(self, db: Session, pager: Pager) -> Pager:
+        db.flush()
+        return pager
+
+    def delete(self, db: Session, pager: Pager) -> None:
+        db.delete(pager)
+        db.flush()
+
+
+pager_repository = PagerRepository()
