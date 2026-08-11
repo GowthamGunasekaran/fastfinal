@@ -3,13 +3,17 @@ SQLAlchemy ORM model for the `pillar` table.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import String, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
 from app.utils.helpers import generate_uuid, utcnow
+
+if TYPE_CHECKING:
+    from app.db.models.pager import Pager
+    from app.db.models.pillar_initiative import PillarInitiative
 
 
 class Pillar(Base):

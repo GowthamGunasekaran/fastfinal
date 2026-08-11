@@ -100,7 +100,7 @@ pytest tests/ -v
 
 **Future GCP PostgreSQL:**
 ```env
-DATABASE_URL=postgresql+psycopg2://user:password@/dbname?host=/cloudsql/project:region:instance
+DATABASE_URL=postgresql+psycopg2://user:password@/dbname?host=/cloudsql/project:retailer:instance
 ```
 
 **Future SQL Server:**
@@ -133,7 +133,7 @@ Create a Pager (status defaults to `DRAFT`) with up to 5 Pillars and 3 Initiativ
 {
   "title": "My Pager",
   "market": "India",
-  "region": "South",
+  "retailer": "South",
   "channel": "Retail",
   "category": "Category A",
   "campaign_focus": "Campaign 2026",
@@ -248,35 +248,35 @@ PATCH /api/v1/pagers/{pager_id}/status
 
 ---
 
-### 6. Landing Page (Published Only)
+### 6. Fetch All Pagers (GET or POST)
 
 ```http
-POST /api/v1/landing
+GET  /api/v1/pagers/fetch-all
+POST /api/v1/pagers/fetch-all
 ```
 
-Returns only `PUBLISHED` pagers. Supports multi-select filtering.
+Returns **only pager table records** (no pillars or initiatives) matching the multi-select filters. Defaults to all non-`DELETED` statuses (`DRAFT`, `PUBLISHED`, `ARCHIVED`) if no explicit `status` filter array is provided.
 
-**No filters (all published):**
-```json
-{}
+**GET example with query params:**
+```http
+GET /api/v1/pagers/fetch-all?market=India&retailer=South&status=PUBLISHED
 ```
 
-**Single market:**
-```json
-{
-  "market": ["India"]
-}
-```
-
-**Multi-select:**
+**POST example with JSON body:**
 ```json
 {
+  "user_id": ["user-001"],
   "market": ["India", "USA"],
+  "retailer": ["South", "West"],
   "channel": ["Retail", "Online"],
-  "category": [],
-  "campaign_focus": []
+  "category": ["Category A"],
+  "campaign": ["Campaign 2026"],
+  "pager_type": ["National"],
+  "status": ["PUBLISHED"]
 }
 ```
+
+> **Note**: Each filter field accepts an array of strings or an empty array `[]` / omitted for no filtering on that dimension.
 
 **Response:**
 ```json
@@ -284,21 +284,25 @@ Returns only `PUBLISHED` pagers. Supports multi-select filtering.
   "total": 2,
   "pagers": [
     {
-      "pager_id": "...",
-      "title": "...",
-      "pillars": [
-        {
-          "pillar_id": "...",
-          "pillar_number": 1,
-          "initiatives": [
-            {
-              "pillar_initiative_id": 1,
-              "initiative_id": "...",
-              "image_urls": ["https://..."]
-            }
-          ]
-        }
-      ]
+      "pager_id": "a0c65017-5898-4b32-b682-c34cd4c3da74",
+      "title": "National Execution Excellence One-Pager 2026",
+      "market": "India",
+      "retailer": "South",
+      "channel": "E-Commerce",
+      "category": "Category A",
+      "campaign_focus": "Campaign 2026",
+      "business_outcome_statement": "Improve execution quality",
+      "scoring_mode": "WEIGHTED",
+      "status": "PUBLISHED",
+      "track": "Track A",
+      "pager_type": "National",
+      "image_url": "https://example.com/hero.jpg",
+      "created_by": "user-001",
+      "created_at": "2026-08-11T12:00:00Z",
+      "updated_by": "user-001",
+      "updated_at": "2026-08-11T12:00:00Z",
+      "published_by": "user-001",
+      "published_at": "2026-08-11T12:00:00Z"
     }
   ]
 }
@@ -330,7 +334,7 @@ Returns distinct values for each dimension, filtered by selected values (cascadi
 ```json
 {
   "market": ["India"],
-  "region": ["North", "South"],
+  "retailer": ["North", "South"],
   "channel": ["Online", "Retail"],
   "category": ["Category A", "Category B"],
   "campaign": ["Campaign 2026"],
@@ -345,10 +349,10 @@ Returns distinct values for each dimension, filtered by selected values (cascadi
 
 | Table | Primary Key | Key Columns |
 |---|---|---|
-| `pager` | `pager_id` (UUID string) | title, market, region, channel, category, campaign_focus, scoring_mode, status |
+| `pager` | `pager_id` (UUID string) | title, market, retailer, channel, category, campaign_focus, scoring_mode, status |
 | `pillar` | `pillar_id` (UUID string) | pager_id (FK), pillar_number, pillar_weight |
 | `pillar_initiative` | `pillar_initiative_id` (INTEGER auto-increment) | initiative_id (UUID), pillar_id (FK), image_urls (JSON) |
-| `metadata` | `metadata_id` (INTEGER) | market, region, channel, category, campaign |
+| `metadata` | `metadata_id` (INTEGER) | market, retailer, channel, category, campaign |
 
 ---
 
@@ -422,7 +426,7 @@ sample_payload.json
 ## Known Design Decisions
 
 1. **`pillar_initiative_id` is an INTEGER** — auto-increment PK. `initiative_id` is a UUID string and is the business identifier.
-2. **`region` is used** (not `retailer`) across all APIs, models, and schemas.
+2. **`retailer` is used** (not `retailer`) across all APIs, models, and schemas.
 3. **image_urls stored as JSON** on the initiative row — no separate image table.
 4. **Soft deletes** — status changes only, records are never physically deleted via API.
 5. **One transaction per Pager** — create/update uses a single `db.commit()` after all operations succeed.

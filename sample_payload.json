@@ -1,7 +1,7 @@
 {
   "title": "National Execution Excellence One-Pager 2026",
   "market": "India",
-  "region": "South",
+  "retailer": "South",
   "channel": "E-Commerce",
   "category": "Category A",
   "campaign_focus": "Campaign 2026",
@@ -11,6 +11,7 @@
   "created_by": "user-001",
   "pager_type": "National",
   "track": "Track A",
+  "image_url": "https://example.com/images/national-one-pager-hero.jpg",
   "pillars": [
     {
       "pillar_number": 1,

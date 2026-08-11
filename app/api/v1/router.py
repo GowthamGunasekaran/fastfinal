@@ -13,12 +13,14 @@ from app.schemas.pager_schema import (
     PagerOut,
     PagerSummary,
     StatusUpdate,
+    FetchAllPagersRequest,
+    FetchAllPagersResponse,
 )
 from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
-from app.schemas.landing_page_schema import LandingPageFilterRequest, LandingPageResponse
+from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
 from app.services.pager_service import pager_service
 from app.services.metadata_service import metadata_service
-from app.services.landing_page_service import landing_page_service
+from app.services.track_service import track_service
 from app.utils.enums import PagerStatus
 
 router = APIRouter(prefix="/api/v1")
@@ -61,16 +63,44 @@ def list_pagers(
     return pager_service.list_pagers(db, status=status, skip=skip, limit=limit)
 
 
+@router.post(
+    "/pagers/fetch-all",
+    response_model=FetchAllPagersResponse,
+    summary="Fetch all pagers (only pager table records, excluding DELETED by default)",
+    tags=["Pagers"],
+)
+def fetch_all_pagers_post(
+    filters: Optional[FetchAllPagersRequest] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all pager table records matching the JSON filter payload.
+    Returns only pager table records (no pillars or initiatives).
+    Excludes DELETED pagers by default (returns DRAFT, PUBLISHED, ARCHIVED).
+    """
+    if filters is None:
+        filters = FetchAllPagersRequest()
+    return pager_service.fetch_all_pagers(db, filters, skip=skip, limit=limit)
+
+
 @router.get(
     "/pagers/{pager_id}",
     response_model=PagerOut,
-    summary="Get a single Pager with full Pillars and Initiatives",
+    summary="Get Pager",
     tags=["Pagers"],
 )
 def get_pager(pager_id: str, db: Session = Depends(get_db)):
     return pager_service.get_pager(db, pager_id)
 
 
+@router.put(
+    "/pagers/{pager_id}",
+    response_model=PagerOut,
+    summary="Update Pager",
+    tags=["Pagers"],
+)
 @router.patch(
     "/pagers/{pager_id}",
     response_model=PagerOut,
@@ -81,7 +111,7 @@ def update_pager(
     pager_id: str, payload: PagerUpdate, db: Session = Depends(get_db)
 ):
     """
-    Partial update for a Pager.
+    Update / Partial update for a Pager.
 
     - Pager fields updated if provided.
     - Pillars synced if `pillars` array is provided:
@@ -96,7 +126,7 @@ def update_pager(
 @router.patch(
     "/pagers/{pager_id}/status",
     response_model=PagerOut,
-    summary="Update pager status (DRAFT/PUBLISHED/DELETED/ARCHIVED)",
+    summary="Update Pager Status",
     tags=["Pagers"],
 )
 def update_pager_status(
@@ -114,51 +144,43 @@ def update_pager_status(
 
 
 # ==========================================================================
-# LANDING PAGE ENDPOINT
-# ==========================================================================
-
-@router.post(
-    "/landing",
-    response_model=LandingPageResponse,
-    summary="Landing page — get published pagers with multi-select filters",
-    tags=["Landing Page"],
-)
-def landing_page(
-    filters: LandingPageFilterRequest,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
-    db: Session = Depends(get_db),
-):
-    """
-    Returns only PUBLISHED pagers with full pillar/initiative tree.
-
-    - Multi-select filters supported for all metadata dimensions.
-    - Empty list = no filter (return all published).
-    - Uses SQLAlchemy selectinload to avoid N+1 queries.
-    """
-    return landing_page_service.get_published_pagers(db, filters, skip=skip, limit=limit)
-
-
-# ==========================================================================
 # METADATA CASCADING ENDPOINT
 # ==========================================================================
 
 @router.post(
     "/metadata/filter",
     response_model=MetadataFilterResponse,
-    summary="Cascading metadata filter for dropdown values",
-    tags=["Metadata"],
+    summary="Filter Metadata",
+    tags=["Pagers"],
 )
 def metadata_filter(
     request: MetadataFilterRequest, db: Session = Depends(get_db)
 ):
     """
     Returns distinct metadata values for cascading dropdowns.
-
-    - Multi-select supported on all fields.
-    - Empty array = no filter (return all distinct values).
-    - Uses IN semantics for multi-select.
-
-    Example: selecting market=["India"] narrows down available regions/channels/etc.
     """
     return metadata_service.get_cascading_filters(db, request)
+
+
+# ==========================================================================
+# UPDATE TRACK ENDPOINT
+# ==========================================================================
+
+@router.patch(
+    "/update-track",
+    response_model=UpdateTrackResponse,
+    summary="Update track for a Pager, Pillar, or Initiative",
+    tags=["Track"],
+)
+def update_track(payload: UpdateTrackRequest, db: Session = Depends(get_db)):
+    """
+    Update the `track` field for exactly one hierarchy level.
+
+    - **table="pager"**       → updates `pager.track`      (requires pager_id)
+    - **table="pillar"**      → updates `pillar.pillar_track`  (requires pager_id + pillar_id)
+    - **table="initiative"**  → updates `initiative.initiative_track`  (requires pager_id + pillar_id + initiative_id)
+
+    The full parent hierarchy is always validated — a pillar must belong to the
+    specified pager, and an initiative must belong to the specified pager AND pillar.
+    """
+    return track_service.update_track(db, payload)

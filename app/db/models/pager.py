@@ -3,7 +3,7 @@ SQLAlchemy ORM model for the `pager` table.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,6 +11,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 from app.utils.enums import ScoringMode, PagerStatus
 from app.utils.helpers import generate_uuid, utcnow
+
+if TYPE_CHECKING:
+    from app.db.models.pillar import Pillar
 
 
 class Pager(Base):
@@ -23,7 +26,7 @@ class Pager(Base):
 
     # Metadata dimensions
     market: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    retailer: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     channel: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     campaign_focus: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -46,6 +49,7 @@ class Pager(Base):
 
     track: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     pager_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
 
     # Audit fields
     created_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

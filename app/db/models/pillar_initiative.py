@@ -6,13 +6,16 @@ No separate image table is used.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import String, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
 from app.utils.helpers import generate_uuid, utcnow
+
+if TYPE_CHECKING:
+    from app.db.models.pillar import Pillar
 
 
 class PillarInitiative(Base):

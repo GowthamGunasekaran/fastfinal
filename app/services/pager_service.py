@@ -17,7 +17,13 @@ from app.db.models.pillar_initiative import PillarInitiative
 from app.repositories.pager_repository import pager_repository
 from app.repositories.pillar_repository import pillar_repository
 from app.repositories.pillar_initiative_repository import initiative_repository
-from app.schemas.pager_schema import PagerCreate, PagerUpdate, PagerOut
+from app.schemas.pager_schema import (
+    PagerCreate,
+    PagerUpdate,
+    PagerOut,
+    FetchAllPagersRequest,
+    FetchAllPagersResponse,
+)
 from app.utils.enums import PagerStatus, ScoringMode
 from app.utils.helpers import generate_uuid, utcnow
 from app.utils.validators import (
@@ -53,7 +59,7 @@ class PagerService:
             pager_id=generate_uuid(),
             title=payload.title,
             market=payload.market,
-            region=payload.region,
+            retailer=payload.retailer,
             channel=payload.channel,
             category=payload.category,
             campaign_focus=payload.campaign_focus,
@@ -62,6 +68,7 @@ class PagerService:
             status=payload.status,
             track=payload.track,
             pager_type=payload.pager_type,
+            image_url=payload.image_url,
             created_by=payload.created_by,
             created_at=utcnow(),
             updated_at=utcnow(),
@@ -128,6 +135,30 @@ class PagerService:
         limit: int = 100,
     ) -> list:
         return pager_repository.list_pagers(db, status=status, skip=skip, limit=limit)
+
+    def fetch_all_pagers(
+        self,
+        db: Session,
+        filters: "FetchAllPagersRequest",
+        skip: int = 0,
+        limit: int = 100,
+    ) -> "FetchAllPagersResponse":
+        from app.schemas.pager_schema import FetchAllPagersResponse
+        pagers = pager_repository.fetch_all_pagers(
+            db,
+            user_id=filters.user_id or [],
+            market=filters.market or [],
+            retailer=filters.retailer or [],
+            channel=filters.channel or [],
+            category=filters.category or [],
+            campaign=filters.campaign or [],
+            campaign_focus=filters.campaign_focus or [],
+            pager_type=filters.pager_type or [],
+            status=filters.status or [],
+            skip=skip,
+            limit=limit,
+        )
+        return FetchAllPagersResponse(total=len(pagers), pagers=pagers)
 
     # ------------------------------------------------------------------
     # Update (PATCH)

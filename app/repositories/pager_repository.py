@@ -49,43 +49,53 @@ class PagerRepository:
             stmt = stmt.where(Pager.status == status)
         return list(db.scalars(stmt).all())
 
-    def list_published(
+    def fetch_all_pagers(
         self,
         db: Session,
+        user_id: Optional[list] = None,
         market: Optional[list] = None,
-        region: Optional[list] = None,
+        retailer: Optional[list] = None,
         channel: Optional[list] = None,
         category: Optional[list] = None,
+        campaign: Optional[list] = None,
         campaign_focus: Optional[list] = None,
         pager_type: Optional[list] = None,
+        status: Optional[list] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list:
         """
-        Fetch PUBLISHED pagers with optional multi-select filters.
-        Uses selectinload to avoid N+1 queries.
+        Fetch pager records only (no pillars or initiatives joined).
+        Filters by multi-select criteria.
+        Defaults to all non-DELETED pagers if no status is specified.
         """
         stmt = (
             select(Pager)
-            .where(Pager.status == PagerStatus.PUBLISHED)
-            .options(
-                selectinload(Pager.pillars).selectinload(Pillar.initiatives)
-            )
-            .order_by(Pager.published_at.desc())
+            .order_by(Pager.created_at.desc())
             .offset(skip)
             .limit(limit)
         )
 
+        if status:
+            stmt = stmt.where(Pager.status.in_(status))
+        else:
+            stmt = stmt.where(Pager.status != PagerStatus.DELETED)
+
+        if user_id:
+            stmt = stmt.where(Pager.created_by.in_(user_id))
         if market:
             stmt = stmt.where(Pager.market.in_(market))
-        if region:
-            stmt = stmt.where(Pager.region.in_(region))
+        if retailer:
+            stmt = stmt.where(Pager.retailer.in_(retailer))
         if channel:
             stmt = stmt.where(Pager.channel.in_(channel))
         if category:
             stmt = stmt.where(Pager.category.in_(category))
-        if campaign_focus:
-            stmt = stmt.where(Pager.campaign_focus.in_(campaign_focus))
+
+        combined_campaigns = list(set((campaign or []) + (campaign_focus or [])))
+        if combined_campaigns:
+            stmt = stmt.where(Pager.campaign_focus.in_(combined_campaigns))
+
         if pager_type:
             stmt = stmt.where(Pager.pager_type.in_(pager_type))
 

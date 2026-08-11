@@ -2,7 +2,7 @@
 Seed script for development data.
 
 Creates:
-- 5 metadata rows (market/region/channel/category/campaign combinations)
+- 5 metadata rows (market/retailer/channel/category/campaign combinations)
 - 1 fully published Pager with 5 Pillars, 3 Initiatives each, 3 image URLs each
 """
 
@@ -17,11 +17,11 @@ from app.utils.enums import ScoringMode, PagerStatus
 
 
 METADATA_ROWS = [
-    {"market": "India",  "region": "South", "channel": "Retail",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "India",  "region": "South", "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "India",  "region": "North", "channel": "Retail",     "category": "Category B", "campaign": "Campaign 2026"},
-    {"market": "USA",    "region": "West",  "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "USA",    "region": "East",  "channel": "Retail",     "category": "Category C", "campaign": "Campaign 2027"},
+    {"market": "India",  "retailer": "South", "channel": "Retail",     "category": "Category A", "campaign": "Campaign 2026"},
+    {"market": "India",  "retailer": "South", "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
+    {"market": "India",  "retailer": "North", "channel": "Retail",     "category": "Category B", "campaign": "Campaign 2026"},
+    {"market": "USA",    "retailer": "West",  "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
+    {"market": "USA",    "retailer": "East",  "channel": "Retail",     "category": "Category C", "campaign": "Campaign 2027"},
 ]
 
 PILLARS_SEED = [
@@ -64,7 +64,7 @@ def seed_published_pager(db: Session) -> None:
         pager_id=pager_id,
         title="National Execution Excellence One-Pager 2026",
         market="India",
-        region="South",
+        retailer="South",
         channel="E-Commerce",
         category="Category A",
         campaign_focus="Campaign 2026",
@@ -73,6 +73,7 @@ def seed_published_pager(db: Session) -> None:
         status=PagerStatus.PUBLISHED,
         pager_type="National",
         track="Track A",
+        image_url="https://example.com/images/national-one-pager-hero.jpg",
         created_by="seed-script",
         created_at=now,
         updated_at=now,

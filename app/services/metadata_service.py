@@ -25,7 +25,7 @@ class MetadataService:
         result = metadata_repository.get_filtered_values(
             db,
             market=request.market or [],
-            region=request.region or [],
+            retailer=request.retailer or [],
             channel=request.channel or [],
             category=request.category or [],
             campaign=request.campaign or [],
@@ -37,7 +37,7 @@ class MetadataService:
 
         return MetadataFilterResponse(
             market=result["market"],
-            region=result["region"],
+            retailer=result["retailer"],
             channel=result["channel"],
             category=result["category"],
             campaign=result["campaign"],

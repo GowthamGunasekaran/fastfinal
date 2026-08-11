@@ -18,7 +18,7 @@ class Metadata(Base):
         Integer, primary_key=True, autoincrement=True
     )
     market: Mapped[str] = mapped_column(String(100), nullable=False)
-    region: Mapped[str] = mapped_column(String(100), nullable=False)
+    retailer: Mapped[str] = mapped_column(String(100), nullable=False)
     channel: Mapped[str] = mapped_column(String(100), nullable=False)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     campaign: Mapped[str] = mapped_column(String(100), nullable=False)

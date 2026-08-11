@@ -20,6 +20,28 @@ from app.db.models import Pager, Pillar, PillarInitiative, Metadata  # noqa: F40
 from app.api.v1.router import router
 
 
+def ensure_schema_updated():
+    """Ensure newly added columns exist in pre-existing database tables."""
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        if "pager" in tables:
+            columns = [c["name"] for c in inspector.get_columns("pager")]
+            with engine.begin() as conn:
+                if "image_url" not in columns:
+                    conn.execute(text("ALTER TABLE pager ADD COLUMN image_url VARCHAR(1000)"))
+                if "retailer" not in columns:
+                    conn.execute(text("ALTER TABLE pager ADD COLUMN retailer VARCHAR(100)"))
+        if "metadata" in tables:
+            columns = [c["name"] for c in inspector.get_columns("metadata")]
+            with engine.begin() as conn:
+                if "retailer" not in columns:
+                    conn.execute(text("ALTER TABLE metadata ADD COLUMN retailer VARCHAR(100)"))
+    except Exception as e:
+        print(f"Schema update notice: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -27,6 +49,7 @@ async def lifespan(app: FastAPI):
     """
     # Create all tables
     Base.metadata.create_all(bind=engine)
+    ensure_schema_updated()
 
     # Seed development data
     from app.db.database import SessionLocal

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 class MetadataOut(BaseModel):
     metadata_id: int
     market: str
-    region: str
+    retailer: str
     channel: str
     category: str
     campaign: str
@@ -23,7 +23,7 @@ class MetadataFilterRequest(BaseModel):
     Empty list means no filter (return all distinct values).
     """
     market: Optional[List[str]] = []
-    region: Optional[List[str]] = []
+    retailer: Optional[List[str]] = []
     channel: Optional[List[str]] = []
     category: Optional[List[str]] = []
     campaign: Optional[List[str]] = []
@@ -37,7 +37,7 @@ class MetadataFilterResponse(BaseModel):
     based on the selected filters (cascading behavior).
     """
     market: List[str] = []
-    region: List[str] = []
+    retailer: List[str] = []
     channel: List[str] = []
     category: List[str] = []
     campaign: List[str] = []

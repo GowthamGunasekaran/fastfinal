@@ -38,7 +38,7 @@ def _minimal_pager(scoring_mode="UNWEIGHTED"):
     return {
         "title": "Test Pager",
         "market": "India",
-        "region": "South",
+        "retailer": "South",
         "channel": "Retail",
         "category": "Category A",
         "campaign_focus": "Campaign 2026",
@@ -81,7 +81,7 @@ def _full_pager():
     return {
         "title": "Full 5-Pillar Pager",
         "market": "India",
-        "region": "South",
+        "retailer": "South",
         "channel": "E-Commerce",
         "category": "Category A",
         "campaign_focus": "Campaign 2026",
@@ -396,40 +396,40 @@ def _create_and_publish(client) -> str:
     return pager_id
 
 
-def test_published_pager_appears_in_landing_page(client):
-    """Test 11: Published pager appears in landing page."""
+def test_published_pager_appears_in_fetch_all(client):
+    """Test 11: Published pager appears in fetch-all pagers."""
     pager_id = _create_and_publish(client)
-    resp = client.post("/api/v1/landing", json={})
+    resp = client.post("/api/v1/pagers/fetch-all", json={})
     assert resp.status_code == 200
     pager_ids = [p["pager_id"] for p in resp.json()["pagers"]]
     assert pager_id in pager_ids
 
 
-def test_draft_not_in_landing_page(client):
-    """Test 12: Draft pager does NOT appear in landing page."""
+def test_draft_appears_in_fetch_all_by_default(client):
+    """Test 12: Draft pager appears in fetch-all pagers by default (non-DELETED)."""
     payload = _minimal_pager()
     pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
-    resp = client.post("/api/v1/landing", json={})
+    resp = client.post("/api/v1/pagers/fetch-all", json={})
     pager_ids = [p["pager_id"] for p in resp.json()["pagers"]]
-    assert pager_id not in pager_ids
+    assert pager_id in pager_ids
 
 
-def test_deleted_not_in_landing_page(client):
-    """Test 13: Deleted pager does NOT appear in landing page."""
-    payload = _minimal_pager()
-    pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
-    client.patch(f"/api/v1/pagers/{pager_id}/status", json={"status": "DELETED"})
-    resp = client.post("/api/v1/landing", json={})
-    pager_ids = [p["pager_id"] for p in resp.json()["pagers"]]
-    assert pager_id not in pager_ids
-
-
-def test_archived_not_in_landing_page(client):
-    """Test 14: Archived pager does NOT appear in landing page."""
+def test_archived_appears_in_fetch_all_by_default(client):
+    """Test 13: Archived pager appears in fetch-all pagers by default (non-DELETED)."""
     payload = _minimal_pager()
     pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
     client.patch(f"/api/v1/pagers/{pager_id}/status", json={"status": "ARCHIVED"})
-    resp = client.post("/api/v1/landing", json={})
+    resp = client.post("/api/v1/pagers/fetch-all", json={})
+    pager_ids = [p["pager_id"] for p in resp.json()["pagers"]]
+    assert pager_id in pager_ids
+
+
+def test_deleted_not_in_fetch_all(client):
+    """Test 14: Deleted pager does NOT appear in fetch-all pagers by default."""
+    payload = _minimal_pager()
+    pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
+    client.patch(f"/api/v1/pagers/{pager_id}/status", json={"status": "DELETED"})
+    resp = client.post("/api/v1/pagers/fetch-all", json={})
     pager_ids = [p["pager_id"] for p in resp.json()["pagers"]]
     assert pager_id not in pager_ids
 
@@ -442,11 +442,11 @@ def _seed_test_metadata(db):
     """Seed metadata rows directly into the test database."""
     from app.db.models.metadata import Metadata
     rows = [
-        Metadata(market="India", region="South", channel="Retail",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="India", region="South", channel="Online",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="India", region="North", channel="Retail",    category="Category B", campaign="Campaign 2026"),
-        Metadata(market="USA",   region="West",  channel="Online",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="USA",   region="East",  channel="Retail",    category="Category C", campaign="Campaign 2027"),
+        Metadata(market="India", retailer="South", channel="Retail",    category="Category A", campaign="Campaign 2026"),
+        Metadata(market="India", retailer="South", channel="Online",    category="Category A", campaign="Campaign 2026"),
+        Metadata(market="India", retailer="North", channel="Retail",    category="Category B", campaign="Campaign 2026"),
+        Metadata(market="USA",   retailer="West",  channel="Online",    category="Category A", campaign="Campaign 2026"),
+        Metadata(market="USA",   retailer="East",  channel="Retail",    category="Category C", campaign="Campaign 2027"),
     ]
     db.add_all(rows)
     db.flush()
@@ -459,9 +459,9 @@ def test_metadata_cascading_basic(client, db):
     assert resp.status_code == 200
     data = resp.json()
     assert "India" in data["market"]
-    # Region should only contain India regions
-    for region in data["region"]:
-        assert region in ["South", "North"]
+    # retailer should only contain India regions
+    for retailer in data["retailer"]:
+        assert retailer in ["South", "North"]
 
 
 def test_metadata_multi_select(client, db):
@@ -473,7 +473,7 @@ def test_metadata_multi_select(client, db):
     )
     assert resp.status_code == 200
     data = resp.json()
-    regions = data["region"]
+    regions = data["retailer"]
     assert "South" in regions
     assert "West" in regions or "East" in regions
 
@@ -489,11 +489,11 @@ def test_metadata_empty_filter_returns_all(client, db):
 
 
 # ---------------------------------------------------------------------------
-# Test 18: Landing page multi-select filtering
+# Test 18: Fetch all multi-select filtering
 # ---------------------------------------------------------------------------
 
-def test_landing_page_filter_by_market(client):
-    """Test 18: Landing page filters published pagers by market."""
+def test_fetch_all_filter_by_market(client):
+    """Test 18: fetch-all filters pagers by market."""
     payload = _full_pager()
     payload["market"] = "TestMarket"
     pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
@@ -502,14 +502,19 @@ def test_landing_page_filter_by_market(client):
         json={"status": "PUBLISHED", "updated_by": "tester"},
     )
 
-    # Filter by this specific market
-    resp = client.post("/api/v1/landing", json={"market": ["TestMarket"]})
+    # Filter by this specific market via POST
+    resp = client.post("/api/v1/pagers/fetch-all", json={"market": ["TestMarket"]})
     assert resp.status_code == 200
     data = resp.json()
     assert all(p["market"] == "TestMarket" for p in data["pagers"])
 
+    # Verify response contains pager fields but NOT pillars
+    first = data["pagers"][0]
+    assert "pager_id" in first
+    assert "pillars" not in first
+
     # Filter by a different market — should not include our pager
-    resp2 = client.post("/api/v1/landing", json={"market": ["OtherMarket"]})
+    resp2 = client.post("/api/v1/pagers/fetch-all", json={"market": ["OtherMarket"]})
     pager_ids = [p["pager_id"] for p in resp2.json()["pagers"]]
     assert pager_id not in pager_ids
 
@@ -636,3 +641,415 @@ def test_patch_missing_pager_returns_404(client):
     """PATCH on a non-existent pager_id returns 404."""
     resp = client.patch("/api/v1/pagers/non-existent-id", json={"title": "X"})
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Additional: Landing page advanced filters & Pager image_url
+# ---------------------------------------------------------------------------
+
+def test_landing_page_filter_all_fields(client):
+    """Test landing page filter with user_id, status, retailer, campaign, array & empty array formats."""
+    payload = _full_pager()
+    payload["created_by"] = "user-123"
+    payload["retailer"] = "SuperMart"
+    payload["image_url"] = "https://example.com/pager-hero.jpg"
+    
+    pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
+    client.patch(
+        f"/api/v1/pagers/{pager_id}/status",
+        json={"status": "PUBLISHED", "updated_by": "user-123"},
+    )
+
+    # Filter with user_id array, retailer array, status array
+    filter_req = {
+        "user_id": ["user-123"],
+        "market": [],
+        "retailer": ["SuperMart"],
+        "channel": [],
+        "category": [],
+        "campaign": ["Campaign 2026"],
+        "pager_type": [],
+        "status": ["PUBLISHED"],
+    }
+    resp = client.post("/api/v1/pagers/fetch-all", json=filter_req)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 1
+    found = [p for p in data["pagers"] if p["pager_id"] == pager_id]
+    assert len(found) == 1
+    assert found[0]["image_url"] == "https://example.com/pager-hero.jpg"
+
+
+def test_pager_image_url_creation_and_update(client):
+    """Test creating and updating pager image_url."""
+    payload = _minimal_pager()
+    payload["image_url"] = "https://example.com/hero.jpg"
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["image_url"] == "https://example.com/hero.jpg"
+    pager_id = data["pager_id"]
+
+    patch_resp = client.patch(
+        f"/api/v1/pagers/{pager_id}",
+        json={"image_url": "https://example.com/new-hero.jpg"},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["image_url"] == "https://example.com/new-hero.jpg"
+
+
+def test_fetch_all_pagers_post_endpoint(client):
+    """Test POST /api/v1/pagers/fetch-all endpoint."""
+    resp = client.post("/api/v1/pagers/fetch-all", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total" in data
+    assert "pagers" in data
+
+
+# ===========================================================================
+# UPDATE TRACK API TESTS  (PATCH /api/v1/update-track)
+# ===========================================================================
+
+URL = "/api/v1/update-track"
+
+
+def _make_pager_with_pillar_and_initiative(client):
+    """
+    Helper: create a Pager with 1 Pillar + 1 Initiative.
+    Returns (pager_id, pillar_id, initiative_id).
+    """
+    payload = {
+        "title": "Track Test Pager",
+        "market": "India",
+        "scoring_mode": "UNWEIGHTED",
+        "created_by": "tester",
+        "pillars": [
+            {
+                "pillar_number": 1,
+                "pillar_name": "Pillar One",
+                "pillar_track": "Original Pillar Track",
+                "initiatives": [
+                    {
+                        "initiative_number": 1,
+                        "initiative_description": "Initiative One",
+                        "initiative_track": "Original Initiative Track",
+                    }
+                ],
+            }
+        ],
+    }
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    pager_id = data["pager_id"]
+    pillar_id = data["pillars"][0]["pillar_id"]
+    initiative_id = data["pillars"][0]["initiatives"][0]["initiative_id"]
+    return pager_id, pillar_id, initiative_id
+
+
+# ---------------------------------------------------------------------------
+# Test UT-01: Update Pager track successfully
+# ---------------------------------------------------------------------------
+
+def test_update_track_pager_success(client):
+    """UT-01: PATCH update-track with table=pager updates pager.track."""
+    pager_id, pillar_id, initiative_id = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "pager",
+        "pager_id": pager_id,
+        "track": "Track A",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["table"] == "pager"
+    assert data["pager_id"] == pager_id
+    assert data["track"] == "Track A"
+    assert data["updated_by"] == "user-001"
+    assert data["pillar_id"] is None
+    assert data["initiative_id"] is None
+
+    # Verify pager.track persisted
+    get_resp = client.get(f"/api/v1/pagers/{pager_id}")
+    assert get_resp.json()["track"] == "Track A"
+
+
+# ---------------------------------------------------------------------------
+# Test UT-02: Update Pillar track successfully
+# ---------------------------------------------------------------------------
+
+def test_update_track_pillar_success(client):
+    """UT-02: PATCH update-track with table=pillar updates pillar.pillar_track."""
+    pager_id, pillar_id, initiative_id = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "pillar",
+        "pager_id": pager_id,
+        "pillar_id": pillar_id,
+        "track": "Track B",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["table"] == "pillar"
+    assert data["pillar_id"] == pillar_id
+    assert data["track"] == "Track B"
+    assert data["initiative_id"] is None
+
+    # Verify pillar_track persisted
+    get_resp = client.get(f"/api/v1/pagers/{pager_id}")
+    assert get_resp.json()["pillars"][0]["pillar_track"] == "Track B"
+
+
+# ---------------------------------------------------------------------------
+# Test UT-03: Update Initiative track successfully
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_success(client):
+    """UT-03: PATCH update-track with table=initiative updates initiative_track."""
+    pager_id, pillar_id, initiative_id = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": pager_id,
+        "pillar_id": pillar_id,
+        "initiative_id": initiative_id,
+        "track": "Track C",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["table"] == "initiative"
+    assert data["initiative_id"] == initiative_id
+    assert data["track"] == "Track C"
+
+    # Verify initiative_track persisted
+    get_resp = client.get(f"/api/v1/pagers/{pager_id}")
+    assert get_resp.json()["pillars"][0]["initiatives"][0]["initiative_track"] == "Track C"
+
+
+# ---------------------------------------------------------------------------
+# Test UT-04: Pager not found → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_pager_not_found(client):
+    """UT-04: Non-existent pager_id → 404."""
+    resp = client.patch(URL, json={
+        "table": "pager",
+        "pager_id": "00000000-0000-0000-0000-000000000000",
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+    assert "Pager not found" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Test UT-05: Pillar not found → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_pillar_not_found(client):
+    """UT-05: Non-existent pillar_id under a valid pager → 404."""
+    pager_id, _, _ = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "pillar",
+        "pager_id": pager_id,
+        "pillar_id": "00000000-0000-0000-0000-000000000000",
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+    assert "Pillar not found" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Test UT-06: Initiative not found → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_not_found(client):
+    """UT-06: Non-existent initiative_id under valid pager+pillar → 404."""
+    pager_id, pillar_id, _ = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": pager_id,
+        "pillar_id": pillar_id,
+        "initiative_id": "00000000-0000-0000-0000-000000000000",
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+    assert "Initiative not found" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Test UT-07: Pillar exists but belongs to another Pager → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_pillar_wrong_pager(client):
+    """UT-07: Use a real pillar_id but a different pager_id → 404."""
+    pager_id_a, pillar_id_a, _ = _make_pager_with_pillar_and_initiative(client)
+    pager_id_b, _, _ = _make_pager_with_pillar_and_initiative(client)
+
+    # pillar_id_a belongs to pager_id_a; querying under pager_id_b must 404
+    resp = client.patch(URL, json={
+        "table": "pillar",
+        "pager_id": pager_id_b,
+        "pillar_id": pillar_id_a,
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Test UT-08: Initiative exists but belongs to another Pillar → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_wrong_pillar(client):
+    """UT-08: Real initiative_id but wrong pillar_id → 404."""
+    pager_id, pillar_id, initiative_id = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": pager_id,
+        "pillar_id": "00000000-0000-0000-0000-000000000000",  # wrong pillar
+        "initiative_id": initiative_id,
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Test UT-09: Initiative exists but belongs to another Pager → 404
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_wrong_pager(client):
+    """UT-09: Real initiative_id but wrong pager_id → 404."""
+    pager_id_a, pillar_id_a, initiative_id_a = _make_pager_with_pillar_and_initiative(client)
+    pager_id_b, pillar_id_b, _ = _make_pager_with_pillar_and_initiative(client)
+
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": pager_id_b,          # wrong pager
+        "pillar_id": pillar_id_b,
+        "initiative_id": initiative_id_a,  # belongs to pager_a/pillar_a
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Test UT-10: Invalid table value → 422
+# ---------------------------------------------------------------------------
+
+def test_update_track_invalid_table(client):
+    """UT-10: table value not in ['pager','pillar','initiative'] → 422."""
+    resp = client.patch(URL, json={
+        "table": "unknown_table",
+        "pager_id": "some-id",
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Test UT-11: Missing pillar_id for table=pillar → 422
+# ---------------------------------------------------------------------------
+
+def test_update_track_missing_pillar_id(client):
+    """UT-11: table=pillar with no pillar_id → 422 validation error."""
+    resp = client.patch(URL, json={
+        "table": "pillar",
+        "pager_id": "some-id",
+        # pillar_id intentionally omitted
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Test UT-12: Missing pillar_id for table=initiative → 422
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_missing_pillar_id(client):
+    """UT-12: table=initiative with no pillar_id → 422 validation error."""
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": "some-id",
+        # pillar_id omitted
+        "initiative_id": "some-initiative-id",
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Test UT-13: Missing initiative_id for table=initiative → 422
+# ---------------------------------------------------------------------------
+
+def test_update_track_initiative_missing_initiative_id(client):
+    """UT-13: table=initiative with no initiative_id → 422 validation error."""
+    resp = client.patch(URL, json={
+        "table": "initiative",
+        "pager_id": "some-id",
+        "pillar_id": "some-pillar-id",
+        # initiative_id omitted
+        "track": "Track X",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Test UT-14: Empty track → 422
+# ---------------------------------------------------------------------------
+
+def test_update_track_empty_track(client):
+    """UT-14: Empty track string → 422 (min_length=1)."""
+    resp = client.patch(URL, json={
+        "table": "pager",
+        "pager_id": "some-id",
+        "track": "",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Test UT-15: Verify only the requested column changes (isolation)
+# ---------------------------------------------------------------------------
+
+def test_update_track_only_requested_column_changes(client):
+    """UT-15: Updating pager.track must NOT change pillar_track or initiative_track."""
+    pager_id, pillar_id, initiative_id = _make_pager_with_pillar_and_initiative(client)
+
+    # Capture original values
+    original = client.get(f"/api/v1/pagers/{pager_id}").json()
+    original_pillar_track = original["pillars"][0]["pillar_track"]
+    original_init_track = original["pillars"][0]["initiatives"][0]["initiative_track"]
+
+    # Update only pager.track
+    resp = client.patch(URL, json={
+        "table": "pager",
+        "pager_id": pager_id,
+        "track": "NEW PAGER TRACK",
+        "updated_by": "user-001",
+    })
+    assert resp.status_code == 200
+
+    # Verify pager.track changed
+    after = client.get(f"/api/v1/pagers/{pager_id}").json()
+    assert after["track"] == "NEW PAGER TRACK"
+
+    # Verify pillar_track and initiative_track are untouched
+    assert after["pillars"][0]["pillar_track"] == original_pillar_track
+    assert after["pillars"][0]["initiatives"][0]["initiative_track"] == original_init_track

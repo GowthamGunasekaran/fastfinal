@@ -30,7 +30,7 @@ class MetadataRepository:
         self,
         db: Session,
         market: Optional[List[str]] = None,
-        region: Optional[List[str]] = None,
+        retailer: Optional[List[str]] = None,
         channel: Optional[List[str]] = None,
         category: Optional[List[str]] = None,
         campaign: Optional[List[str]] = None,
@@ -50,7 +50,7 @@ class MetadataRepository:
 
         active_filters = {
             "market": market or [],
-            "region": region or [],
+            "retailer": retailer or [],
             "channel": channel or [],
             "category": category or [],
             "campaign": campaign or [],
@@ -63,7 +63,7 @@ class MetadataRepository:
 
         return {
             "market": _fetch("market"),
-            "region": _fetch("region"),
+            "retailer": _fetch("retailer"),
             "channel": _fetch("channel"),
             "category": _fetch("category"),
             "campaign": _fetch("campaign"),
