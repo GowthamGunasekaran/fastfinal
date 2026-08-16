@@ -33,7 +33,6 @@ class MetadataRepository:
         retailer: Optional[List[str]] = None,
         channel: Optional[List[str]] = None,
         category: Optional[List[str]] = None,
-        campaign: Optional[List[str]] = None,
     ) -> dict:
         """
         Return distinct values for each dimension based on IN-filter semantics.
@@ -53,7 +52,6 @@ class MetadataRepository:
             "retailer": retailer or [],
             "channel": channel or [],
             "category": category or [],
-            "campaign": campaign or [],
         }
 
         def _fetch(column_name: str) -> List[str]:
@@ -66,7 +64,6 @@ class MetadataRepository:
             "retailer": _fetch("retailer"),
             "channel": _fetch("channel"),
             "category": _fetch("category"),
-            "campaign": _fetch("campaign"),
         }
 
     def count(self, db: Session) -> int:

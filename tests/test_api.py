@@ -439,21 +439,32 @@ def test_deleted_not_in_fetch_all(client):
 # ---------------------------------------------------------------------------
 
 def _seed_test_metadata(db):
-    """Seed metadata rows directly into the test database."""
+    """Seed metadata rows and campaign rows directly into the test database."""
     from app.db.models.metadata import Metadata
-    rows = [
-        Metadata(market="India", retailer="South", channel="Retail",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="India", retailer="South", channel="Online",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="India", retailer="North", channel="Retail",    category="Category B", campaign="Campaign 2026"),
-        Metadata(market="USA",   retailer="West",  channel="Online",    category="Category A", campaign="Campaign 2026"),
-        Metadata(market="USA",   retailer="East",  channel="Retail",    category="Category C", campaign="Campaign 2027"),
+    from app.db.models.campaign import Campaign
+    from app.utils.helpers import generate_uuid, utcnow
+
+    meta_rows = [
+        Metadata(market="India", retailer="South", channel="Retail",    category="Category A"),
+        Metadata(market="India", retailer="South", channel="Online",    category="Category A"),
+        Metadata(market="India", retailer="North", channel="Retail",    category="Category B"),
+        Metadata(market="USA",   retailer="West",  channel="Online",    category="Category A"),
+        Metadata(market="USA",   retailer="East",  channel="Retail",    category="Category C"),
     ]
-    db.add_all(rows)
+    db.add_all(meta_rows)
+
+    campaign_rows = [
+        Campaign(campaign_id=generate_uuid(), market="India", campaign_name="India Festive 2026", created_by="tester1", created_at=utcnow()),
+        Campaign(campaign_id=generate_uuid(), market="India", campaign_name="India Monsoon 2026", created_by="tester1", created_at=utcnow()),
+        Campaign(campaign_id=generate_uuid(), market="USA", campaign_name="USA Summer 2026", created_by="tester2", created_at=utcnow()),
+        Campaign(campaign_id=generate_uuid(), market="UK", campaign_name="UK Autumn 2026", created_by="tester3", created_at=utcnow()),
+    ]
+    db.add_all(campaign_rows)
     db.flush()
 
 
 def test_metadata_cascading_basic(client, db):
-    """Test 15: Metadata filter returns expected distinct values."""
+    """Test 15: Metadata filter returns expected distinct values including campaigns filtered by market."""
     _seed_test_metadata(db)
     resp = client.post("/api/v1/metadata/filter", json={"market": ["India"]})
     assert resp.status_code == 200
@@ -462,6 +473,11 @@ def test_metadata_cascading_basic(client, db):
     # retailer should only contain India regions
     for retailer in data["retailer"]:
         assert retailer in ["South", "North"]
+    # campaign should only contain India campaigns
+    assert "India Festive 2026" in data["campaign"]
+    assert "India Monsoon 2026" in data["campaign"]
+    assert "USA Summer 2026" not in data["campaign"]
+    assert "UK Autumn 2026" not in data["campaign"]
 
 
 def test_metadata_multi_select(client, db):
@@ -476,6 +492,9 @@ def test_metadata_multi_select(client, db):
     regions = data["retailer"]
     assert "South" in regions
     assert "West" in regions or "East" in regions
+    assert "India Festive 2026" in data["campaign"]
+    assert "USA Summer 2026" in data["campaign"]
+    assert "UK Autumn 2026" not in data["campaign"]
 
 
 def test_metadata_empty_filter_returns_all(client, db):
@@ -486,6 +505,71 @@ def test_metadata_empty_filter_returns_all(client, db):
     data = resp.json()
     assert "India" in data["market"]
     assert "USA" in data["market"]
+    # All distinct campaigns returned when no market selected
+    assert "India Festive 2026" in data["campaign"]
+    assert "India Monsoon 2026" in data["campaign"]
+    assert "USA Summer 2026" in data["campaign"]
+    assert "UK Autumn 2026" in data["campaign"]
+
+
+# ---------------------------------------------------------------------------
+# Campaign API tests
+# ---------------------------------------------------------------------------
+
+def test_create_campaign_success(client):
+    """Create a campaign with user_id, campaign_name, and market."""
+    payload = {
+        "market": "Germany",
+        "campaign_name": "Oktoberfest Promo 2026",
+        "user_id": "user-456",
+    }
+    resp = client.post("/api/v1/campaigns", json=payload)
+    assert resp.status_code == 201, resp.text
+    data = resp.json()
+    assert data["market"] == "Germany"
+    assert data["campaign_name"] == "Oktoberfest Promo 2026"
+    assert data["created_by"] == "user-456"
+    assert "campaign_id" in data
+    assert data["created_at"] is not None
+
+
+def test_create_campaign_with_aliases(client):
+    """Create campaign using 'campaign' and 'created_by' field names."""
+    payload = {
+        "market": "Japan",
+        "campaign": "Cherry Blossom 2026",
+        "created_by": "user-789",
+    }
+    resp = client.post("/api/v1/campaign", json=payload)
+    assert resp.status_code == 201, resp.text
+    data = resp.json()
+    assert data["market"] == "Japan"
+    assert data["campaign_name"] == "Cherry Blossom 2026"
+    assert data["created_by"] == "user-789"
+
+
+def test_list_campaigns_and_filter(client, db):
+    """List campaigns with and without market filter."""
+    _seed_test_metadata(db)
+
+    # List all campaigns
+    resp = client.get("/api/v1/campaigns")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 4
+    names = [c["campaign_name"] for c in data["campaigns"]]
+    assert "India Festive 2026" in names
+    assert "USA Summer 2026" in names
+
+    # Filter by market=India
+    resp_india = client.get("/api/v1/campaigns?market=India")
+    assert resp_india.status_code == 200
+    data_india = resp_india.json()
+    assert all(c["market"] == "India" for c in data_india["campaigns"])
+    india_names = [c["campaign_name"] for c in data_india["campaigns"]]
+    assert "India Festive 2026" in india_names
+    assert "USA Summer 2026" not in india_names
+
 
 
 # ---------------------------------------------------------------------------
@@ -1053,3 +1137,37 @@ def test_update_track_only_requested_column_changes(client):
     # Verify pillar_track and initiative_track are untouched
     assert after["pillars"][0]["pillar_track"] == original_pillar_track
     assert after["pillars"][0]["initiatives"][0]["initiative_track"] == original_init_track
+
+
+# ===========================================================================
+# STORAGE / IMAGE UPLOAD TEST (Single API)
+# ===========================================================================
+
+def test_upload_image_success(client):
+    """Test uploading an image file successfully and receiving a signed URL."""
+    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
+    files = {"file": ("test_logo.png", fake_png, "image/png")}
+    resp = client.post("/api/v1/upload", files=files)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert "url" in body
+    assert body["url"].startswith("http")
+
+
+def test_upload_image_invalid_type_rejected(client):
+    """Test that non-image files are rejected with 400."""
+    fake_txt = b"Hello world text file"
+    files = {"file": ("test.txt", fake_txt, "text/plain")}
+    resp = client.post("/api/v1/upload", files=files)
+    assert resp.status_code == 400
+    assert "Only image files" in resp.json()["detail"]
+
+
+def test_upload_image_empty_file_rejected(client):
+    """Test that empty file (0 bytes) is rejected with 400."""
+    files = {"file": ("empty.png", b"", "image/png")}
+    resp = client.post("/api/v1/upload", files=files)
+    assert resp.status_code == 400
+    assert "empty" in resp.json()["detail"]
+
+

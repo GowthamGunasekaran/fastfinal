@@ -9,6 +9,7 @@ from sqlalchemy import select, distinct
 from app.db.models.metadata import Metadata
 from app.db.models.pager import Pager
 from app.repositories.metadata_repository import metadata_repository
+from app.repositories.campaign_repository import campaign_repository
 from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
 from app.utils.enums import PagerStatus
 
@@ -21,6 +22,7 @@ class MetadataService:
         """
         Returns distinct values for each metadata dimension
         filtered by the provided multi-select values.
+        Campaigns are fetched from the campaign table (filtered by market if provided).
         """
         result = metadata_repository.get_filtered_values(
             db,
@@ -28,7 +30,11 @@ class MetadataService:
             retailer=request.retailer or [],
             channel=request.channel or [],
             category=request.category or [],
-            campaign=request.campaign or [],
+        )
+
+        # Campaigns come from the campaign table (filtered by market if provided)
+        campaigns = campaign_repository.get_distinct_campaign_names(
+            db, market=request.market or []
         )
 
         # pager_type and status come from the pager table
@@ -40,7 +46,7 @@ class MetadataService:
             retailer=result["retailer"],
             channel=result["channel"],
             category=result["category"],
-            campaign=result["campaign"],
+            campaign=campaigns,
             pager_type=pager_types,
             status=statuses,
         )

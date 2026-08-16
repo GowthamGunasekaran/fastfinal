@@ -2,7 +2,7 @@
 API v1 router — all routes registered here and included in main.py.
 """
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, File, UploadFile, status
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
@@ -18,9 +18,13 @@ from app.schemas.pager_schema import (
 )
 from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
 from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
+from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
+from app.schemas.storage_schema import ImageUploadResponse
 from app.services.pager_service import pager_service
 from app.services.metadata_service import metadata_service
 from app.services.track_service import track_service
+from app.services.campaign_service import campaign_service
+from app.services.storage_service import storage_service
 from app.utils.enums import PagerStatus
 
 router = APIRouter(prefix="/api/v1")
@@ -184,3 +188,73 @@ def update_track(payload: UpdateTrackRequest, db: Session = Depends(get_db)):
     specified pager, and an initiative must belong to the specified pager AND pillar.
     """
     return track_service.update_track(db, payload)
+
+
+# ==========================================================================
+# CAMPAIGN ENDPOINTS
+# ==========================================================================
+
+@router.post(
+    "/campaigns",
+    response_model=CampaignOut,
+    status_code=201,
+    summary="Create a new Campaign",
+    tags=["Campaigns"],
+)
+@router.post(
+    "/campaign",
+    response_model=CampaignOut,
+    status_code=201,
+    include_in_schema=False,
+)
+def create_campaign(
+    payload: CampaignCreate, db: Session = Depends(get_db)
+):
+    """
+    Create a new Campaign record with market, campaign_name, and user_id (created_by).
+    """
+    return campaign_service.create_campaign(db, payload)
+
+
+@router.get(
+    "/campaigns",
+    response_model=CampaignListResponse,
+    summary="List Campaigns",
+    tags=["Campaigns"],
+)
+@router.get(
+    "/campaign",
+    response_model=CampaignListResponse,
+    include_in_schema=False,
+)
+def list_campaigns(
+    market: Optional[List[str]] = Query(None, description="Filter by market(s)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    """
+    List campaigns with optional market filter.
+    """
+    return campaign_service.list_campaigns(db, market=market, skip=skip, limit=limit)
+
+
+# ==========================================================================
+# STORAGE / IMAGE UPLOAD (Single API)
+# ==========================================================================
+
+@router.post(
+    "/upload",
+    response_model=ImageUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload image to GCP Cloud Storage and get signed URL",
+    tags=["Upload"],
+)
+async def upload_image(file: UploadFile = File(..., description="Image file to upload")):
+    """
+    Upload an image from React to private GCP Cloud Storage and return its signed URL.
+    """
+    return await storage_service.upload_image(file=file)
+
+
+

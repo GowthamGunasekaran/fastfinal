@@ -12,7 +12,6 @@ class MetadataOut(BaseModel):
     retailer: str
     channel: str
     category: str
-    campaign: str
 
     model_config = {"from_attributes": True}
 

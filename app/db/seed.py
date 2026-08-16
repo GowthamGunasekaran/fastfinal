@@ -9,6 +9,7 @@ Creates:
 from sqlalchemy.orm import Session
 
 from app.db.models.metadata import Metadata
+from app.db.models.campaign import Campaign
 from app.db.models.pager import Pager
 from app.db.models.pillar import Pillar
 from app.db.models.pillar_initiative import PillarInitiative
@@ -17,11 +18,19 @@ from app.utils.enums import ScoringMode, PagerStatus
 
 
 METADATA_ROWS = [
-    {"market": "India",  "retailer": "South", "channel": "Retail",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "India",  "retailer": "South", "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "India",  "retailer": "North", "channel": "Retail",     "category": "Category B", "campaign": "Campaign 2026"},
-    {"market": "USA",    "retailer": "West",  "channel": "Online",     "category": "Category A", "campaign": "Campaign 2026"},
-    {"market": "USA",    "retailer": "East",  "channel": "Retail",     "category": "Category C", "campaign": "Campaign 2027"},
+    {"market": "India",  "retailer": "South", "channel": "Retail",     "category": "Category A"},
+    {"market": "India",  "retailer": "South", "channel": "Online",     "category": "Category A"},
+    {"market": "India",  "retailer": "North", "channel": "Retail",     "category": "Category B"},
+    {"market": "USA",    "retailer": "West",  "channel": "Online",     "category": "Category A"},
+    {"market": "USA",    "retailer": "East",  "channel": "Retail",     "category": "Category C"},
+]
+
+CAMPAIGN_ROWS = [
+    {"market": "India", "campaign_name": "Campaign 2026", "created_by": "seed-user"},
+    {"market": "India", "campaign_name": "Summer Splash 2026", "created_by": "seed-user"},
+    {"market": "USA",   "campaign_name": "Campaign 2026", "created_by": "seed-user"},
+    {"market": "USA",   "campaign_name": "Campaign 2027", "created_by": "seed-user"},
+    {"market": "UK",    "campaign_name": "Autumn Boost 2026", "created_by": "seed-user"},
 ]
 
 PILLARS_SEED = [
@@ -49,6 +58,24 @@ def seed_metadata(db: Session) -> None:
         db.add(Metadata(**row))
     db.flush()
     print(f"  ✓ Seeded {len(METADATA_ROWS)} metadata rows")
+
+
+def seed_campaigns(db: Session) -> None:
+    from sqlalchemy import select, func
+    existing = db.scalar(select(func.count()).select_from(Campaign))
+    if existing and existing > 0:
+        return  # Already seeded
+
+    for row in CAMPAIGN_ROWS:
+        db.add(Campaign(
+            campaign_id=generate_uuid(),
+            market=row["market"],
+            campaign_name=row["campaign_name"],
+            created_by=row["created_by"],
+            created_at=utcnow(),
+        ))
+    db.flush()
+    print(f"  ✓ Seeded {len(CAMPAIGN_ROWS)} campaign rows")
 
 
 def seed_published_pager(db: Session) -> None:
@@ -133,6 +160,7 @@ def seed_published_pager(db: Session) -> None:
 def run_seed(db: Session) -> None:
     print("Running seed data...")
     seed_metadata(db)
+    seed_campaigns(db)
     seed_published_pager(db)
     db.commit()
     print("Seed complete.")
