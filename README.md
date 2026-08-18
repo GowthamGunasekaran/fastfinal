@@ -310,14 +310,43 @@ GET /api/v1/pagers/fetch-all?market=India&retailer=South&status=PUBLISHED
 
 ---
 
-### 7. Metadata Cascading Filter & Fetch
+### 7. Metadata Cascading Filter, Fetch & Upsert
 
 ```http
 POST /api/v1/metadata/filter
 GET  /api/v1/metadata
+POST /api/v1/metadata
 ```
 
-Returns a JSON object / dictionary keyed by market name. Each market contains arrays of strings for `retailer`, `channel`, `category`, and `campaign`.
+Returns or updates metadata dimensions for markets.
+
+**Add / Update Metadata for a Market:**
+```http
+POST /api/v1/metadata
+```
+
+**Request:**
+```json
+{
+  "market": "Germany",
+  "retailer": ["REWE", "Edeka"],
+  "channel": ["Retail", "Online"],
+  "category": ["Category A", "Category B"]
+}
+```
+
+**Response:**
+```json
+{
+  "metadata_id": 6,
+  "market": "Germany",
+  "retailer": ["REWE", "Edeka"],
+  "channel": ["Retail", "Online"],
+  "category": ["Category A", "Category B"]
+}
+```
+
+> **Note**: If the market already exists, it updates `retailer`, `channel`, and `category` arrays; otherwise it inserts a new record. Campaigns are excluded from this payload and continue to be managed via `POST /api/v1/campaigns`.
 
 **Fetch all metadata (GET or empty POST):**
 ```http

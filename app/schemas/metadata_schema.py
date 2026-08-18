@@ -16,6 +16,16 @@ class MarketMetadataItem(BaseModel):
     campaign: List[str] = []
 
 
+class MetadataUpsertRequest(BaseModel):
+    """
+    Request payload to add or update metadata for a market.
+    """
+    market: str
+    retailer: List[str] = []
+    channel: List[str] = []
+    category: List[str] = []
+
+
 class MetadataOut(BaseModel):
     metadata_id: int
     market: str

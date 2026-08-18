@@ -19,6 +19,8 @@ from app.schemas.pager_schema import (
 from app.schemas.metadata_schema import (
     MetadataFilterRequest,
     MarketMetadataItem,
+    MetadataUpsertRequest,
+    MetadataOut,
 )
 from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
 from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
@@ -182,6 +184,23 @@ def fetch_metadata(db: Session = Depends(get_db)):
     to its retailer, channel, category, and campaign string arrays.
     """
     return metadata_service.get_cascading_filters(db, MetadataFilterRequest())
+
+
+@router.post(
+    "/metadata",
+    response_model=MetadataOut,
+    summary="Add or Update Metadata for a Market",
+    tags=["Pagers"],
+)
+def upsert_metadata(
+    payload: MetadataUpsertRequest, db: Session = Depends(get_db)
+):
+    """
+    Add or update metadata for a market.
+    Accepts market, retailer, channel, category arrays (no campaigns).
+    If the market exists, updates arrays; otherwise creates a new market record.
+    """
+    return metadata_service.upsert_metadata(db, payload)
 
 
 # ==========================================================================

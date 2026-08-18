@@ -39,6 +39,32 @@ class MetadataRepository:
     def list_all(self, db: Session) -> List[Metadata]:
         return list(db.scalars(select(Metadata)).all())
 
+    def upsert(
+        self,
+        db: Session,
+        market: str,
+        retailer: List[str],
+        channel: List[str],
+        category: List[str],
+    ) -> Metadata:
+        existing = self.get_by_market(db, market)
+        if existing:
+            existing.retailer = retailer
+            existing.channel = channel
+            existing.category = category
+            db.flush()
+            return existing
+        else:
+            meta = Metadata(
+                market=market,
+                retailer=retailer,
+                channel=channel,
+                category=category,
+            )
+            db.add(meta)
+            db.flush()
+            return meta
+
     def count(self, db: Session) -> int:
         from sqlalchemy import func
         return db.scalar(select(func.count()).select_from(Metadata)) or 0

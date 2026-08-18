@@ -1,11 +1,14 @@
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 
 from app.repositories.metadata_repository import metadata_repository
 from app.repositories.campaign_repository import campaign_repository
 from app.schemas.metadata_schema import (
     MarketMetadataItem,
     MetadataFilterRequest,
+    MetadataUpsertRequest,
+    MetadataOut,
 )
 
 
@@ -53,6 +56,45 @@ class MetadataService:
                 )
 
         return response
+
+    def upsert_metadata(
+        self, db: Session, payload: MetadataUpsertRequest
+    ) -> MetadataOut:
+        """
+        Adds or updates metadata for a market.
+        If market exists, updates retailer, channel, category; else creates a new market record.
+        """
+        market = payload.market.strip() if payload.market else ""
+        if not market:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Market name cannot be empty.",
+            )
+
+        def _clean_list(items: Optional[List[str]]) -> List[str]:
+            if not items:
+                return []
+            cleaned = []
+            for item in items:
+                if item and item.strip() and item.strip() not in cleaned:
+                    cleaned.append(item.strip())
+            return cleaned
+
+        retailer = _clean_list(payload.retailer)
+        channel = _clean_list(payload.channel)
+        category = _clean_list(payload.category)
+
+        metadata_record = metadata_repository.upsert(
+            db,
+            market=market,
+            retailer=retailer,
+            channel=channel,
+            category=category,
+        )
+        db.commit()
+        db.refresh(metadata_record)
+
+        return MetadataOut.model_validate(metadata_record)
 
 
 metadata_service = MetadataService()

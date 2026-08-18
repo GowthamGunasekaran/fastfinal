@@ -535,6 +535,66 @@ def test_metadata_get_all(client, db):
     assert isinstance(data["India"]["campaign"], list)
 
 
+def test_upsert_metadata_create_new(client, db):
+    """Test 19: POST /metadata creates new market metadata record."""
+    resp = client.post(
+        "/api/v1/metadata",
+        json={
+            "market": "Japan",
+            "retailer": ["Tokyo Retail", "Osaka Mall"],
+            "channel": ["Online", "In-Store"],
+            "category": ["Electronics", "Fashion"],
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["market"] == "Japan"
+    assert data["retailer"] == ["Tokyo Retail", "Osaka Mall"]
+    assert data["channel"] == ["Online", "In-Store"]
+    assert data["category"] == ["Electronics", "Fashion"]
+
+    # Verify it appears in GET /metadata
+    get_resp = client.get("/api/v1/metadata")
+    get_data = get_resp.json()
+    assert "Japan" in get_data
+    assert get_data["Japan"]["retailer"] == ["Tokyo Retail", "Osaka Mall"]
+
+
+def test_upsert_metadata_update_existing(client, db):
+    """Test 20: POST /metadata updates existing market metadata record."""
+    _seed_test_metadata(db)
+    resp = client.post(
+        "/api/v1/metadata",
+        json={
+            "market": "India",
+            "retailer": ["North", "South", "East"],
+            "channel": ["Online", "Retail", "Wholesale"],
+            "category": ["Category A", "Category B", "Category C"],
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["market"] == "India"
+    assert "East" in data["retailer"]
+
+    # Verify updated values via GET /metadata while keeping campaigns intact
+    get_resp = client.get("/api/v1/metadata")
+    get_data = get_resp.json()
+    assert get_data["India"]["retailer"] == ["North", "South", "East"]
+    assert get_data["India"]["channel"] == ["Online", "Retail", "Wholesale"]
+    assert "India Festive 2026" in get_data["India"]["campaign"]
+
+
+def test_upsert_metadata_empty_market_validation(client, db):
+    """Test 21: POST /metadata with empty market returns 400 error."""
+    resp = client.post(
+        "/api/v1/metadata",
+        json={"market": "  ", "retailer": ["A"]},
+    )
+    assert resp.status_code == 400
+    assert "Market name cannot be empty" in resp.json()["detail"]
+
+
 # ---------------------------------------------------------------------------
 # Campaign API tests
 # ---------------------------------------------------------------------------
@@ -1192,5 +1252,74 @@ def test_upload_image_empty_file_rejected(client):
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 400
     assert "empty" in resp.json()["detail"]
+
+
+# ===========================================================================
+# METADATA UPSERT TESTS (POST /api/v1/metadata)
+# ===========================================================================
+
+def test_upsert_metadata_insert_new_market(client):
+    """Test inserting metadata for a new market via POST /api/v1/metadata."""
+    payload = {
+        "market": "Germany",
+        "retailer": ["REWE", "Edeka"],
+        "channel": ["Retail", "Online"],
+        "category": ["Category A", "Category B"],
+    }
+    resp = client.post("/api/v1/metadata", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "metadata_id" in data
+    assert data["market"] == "Germany"
+    assert data["retailer"] == ["REWE", "Edeka"]
+    assert data["channel"] == ["Retail", "Online"]
+    assert data["category"] == ["Category A", "Category B"]
+
+    # Verify via GET /api/v1/metadata
+    get_resp = client.get("/api/v1/metadata")
+    assert get_resp.status_code == 200
+    all_meta = get_resp.json()
+    assert "Germany" in all_meta
+    assert all_meta["Germany"]["retailer"] == ["REWE", "Edeka"]
+
+
+def test_upsert_metadata_update_existing_market(client):
+    """Test updating existing market metadata via POST /api/v1/metadata."""
+    # First create Germany
+    client.post("/api/v1/metadata", json={
+        "market": "Germany",
+        "retailer": ["REWE"],
+        "channel": ["Retail"],
+        "category": ["Category A"],
+    })
+
+    # Now update Germany with new arrays
+    update_payload = {
+        "market": "Germany",
+        "retailer": ["REWE", "Aldi"],
+        "channel": ["Retail", "E-Commerce"],
+        "category": ["Category A", "Category C"],
+    }
+    resp = client.post("/api/v1/metadata", json=update_payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["market"] == "Germany"
+    assert data["retailer"] == ["REWE", "Aldi"]
+    assert data["channel"] == ["Retail", "E-Commerce"]
+
+    # Verify via filter
+    filter_resp = client.post("/api/v1/metadata/filter", json={"market": ["Germany"]})
+    assert filter_resp.status_code == 200
+    filtered = filter_resp.json()
+    assert "Germany" in filtered
+    assert filtered["Germany"]["retailer"] == ["REWE", "Aldi"]
+
+
+def test_upsert_metadata_empty_market_validation_error(client):
+    """Test that empty or whitespace market returns 400 Bad Request error."""
+    resp = client.post("/api/v1/metadata", json={"market": "  ", "retailer": ["REWE"]})
+    assert resp.status_code == 400
+    assert "Market name cannot be empty" in resp.json()["detail"]
+
 
 
