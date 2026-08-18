@@ -18,6 +18,8 @@ ENV/
 
 # SQLite database
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 

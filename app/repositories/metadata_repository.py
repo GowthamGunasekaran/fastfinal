@@ -20,51 +20,24 @@ class MetadataRepository:
         db.add_all(records)
         db.flush()
 
-    def get_by_id(self, db: Session, metadata_id: int) -> Optional[Metadata]:
-        return db.get(Metadata, metadata_id)
+    def get_by_market(self, db: Session, market: str) -> Optional[Metadata]:
+        return db.scalar(select(Metadata).where(Metadata.market == market))
+
+    def get_by_markets(
+        self, db: Session, markets: Optional[List[str]] = None
+    ) -> List[Metadata]:
+        stmt = select(Metadata)
+        if markets:
+            flattened_markets = []
+            for m in markets:
+                if m:
+                    flattened_markets.extend([x.strip() for x in m.split(",") if x.strip()])
+            if flattened_markets:
+                stmt = stmt.where(Metadata.market.in_(flattened_markets))
+        return list(db.scalars(stmt).all())
 
     def list_all(self, db: Session) -> List[Metadata]:
         return list(db.scalars(select(Metadata)).all())
-
-    def get_filtered_values(
-        self,
-        db: Session,
-        market: Optional[List[str]] = None,
-        retailer: Optional[List[str]] = None,
-        channel: Optional[List[str]] = None,
-        category: Optional[List[str]] = None,
-    ) -> dict:
-        """
-        Return distinct values for each dimension based on IN-filter semantics.
-        Empty list = no filter for that field.
-        """
-
-        def _build_stmt(column, filters: dict):
-            stmt = select(distinct(column))
-            for field, values in filters.items():
-                if values:
-                    col = getattr(Metadata, field)
-                    stmt = stmt.where(col.in_(values))
-            return stmt
-
-        active_filters = {
-            "market": market or [],
-            "retailer": retailer or [],
-            "channel": channel or [],
-            "category": category or [],
-        }
-
-        def _fetch(column_name: str) -> List[str]:
-            col = getattr(Metadata, column_name)
-            stmt = _build_stmt(col, active_filters)
-            return sorted(db.scalars(stmt).all())
-
-        return {
-            "market": _fetch("market"),
-            "retailer": _fetch("retailer"),
-            "channel": _fetch("channel"),
-            "category": _fetch("category"),
-        }
 
     def count(self, db: Session) -> int:
         from sqlalchemy import func

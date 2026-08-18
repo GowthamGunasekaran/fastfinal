@@ -4,7 +4,7 @@ API v1 router — all routes registered here and included in main.py.
 
 from fastapi import APIRouter, Depends, Query, File, UploadFile, status
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from app.db.database import get_db
 from app.schemas.pager_schema import (
@@ -16,7 +16,10 @@ from app.schemas.pager_schema import (
     FetchAllPagersRequest,
     FetchAllPagersResponse,
 )
-from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
+from app.schemas.metadata_schema import (
+    MetadataFilterRequest,
+    MarketMetadataItem,
+)
 from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
 from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
 from app.schemas.storage_schema import ImageUploadResponse
@@ -153,17 +156,32 @@ def update_pager_status(
 
 @router.post(
     "/metadata/filter",
-    response_model=MetadataFilterResponse,
+    response_model=Dict[str, MarketMetadataItem],
     summary="Filter Metadata",
     tags=["Pagers"],
 )
 def metadata_filter(
-    request: MetadataFilterRequest, db: Session = Depends(get_db)
+    request: Optional[MetadataFilterRequest] = None, db: Session = Depends(get_db)
 ):
     """
-    Returns distinct metadata values for cascading dropdowns.
+    Returns market-keyed dictionary containing arrays of strings for
+    retailer, channel, category, and campaign.
     """
     return metadata_service.get_cascading_filters(db, request)
+
+
+@router.get(
+    "/metadata",
+    response_model=Dict[str, MarketMetadataItem],
+    summary="Fetch All Metadata",
+    tags=["Pagers"],
+)
+def fetch_metadata(db: Session = Depends(get_db)):
+    """
+    Fetch all metadata grouped by market as a dictionary mapping each market
+    to its retailer, channel, category, and campaign string arrays.
+    """
+    return metadata_service.get_cascading_filters(db, MetadataFilterRequest())
 
 
 # ==========================================================================

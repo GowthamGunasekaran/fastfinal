@@ -310,20 +310,21 @@ GET /api/v1/pagers/fetch-all?market=India&retailer=South&status=PUBLISHED
 
 ---
 
-### 7. Metadata Cascading Filter
+### 7. Metadata Cascading Filter & Fetch
 
 ```http
 POST /api/v1/metadata/filter
+GET  /api/v1/metadata
 ```
 
-Returns distinct values for each dimension, filtered by selected values (cascading dropdowns).
+Returns a JSON object / dictionary keyed by market name. Each market contains arrays of strings for `retailer`, `channel`, `category`, and `campaign`.
 
-**No filters (all distinct values):**
-```json
-{}
+**Fetch all metadata (GET or empty POST):**
+```http
+GET /api/v1/metadata
 ```
 
-**Filtered by market:**
+**Filter by market (POST body):**
 ```json
 {
   "market": ["India"]
@@ -333,13 +334,18 @@ Returns distinct values for each dimension, filtered by selected values (cascadi
 **Response:**
 ```json
 {
-  "market": ["India"],
-  "retailer": ["North", "South"],
-  "channel": ["Online", "Retail"],
-  "category": ["Category A", "Category B"],
-  "campaign": ["Campaign 2026"],
-  "pager_type": [],
-  "status": []
+  "India": {
+    "retailer": ["North", "South"],
+    "channel": ["Online", "Retail"],
+    "category": ["Category A", "Category B"],
+    "campaign": ["Campaign 2026", "Summer Splash 2026"]
+  },
+  "USA": {
+    "retailer": ["East", "West"],
+    "channel": ["Online", "Retail"],
+    "category": ["Category A", "Category C"],
+    "campaign": ["Campaign 2026", "Campaign 2027"]
+  }
 }
 ```
 
@@ -352,7 +358,8 @@ Returns distinct values for each dimension, filtered by selected values (cascadi
 | `pager` | `pager_id` (UUID string) | title, market, retailer, channel, category, campaign_focus, scoring_mode, status |
 | `pillar` | `pillar_id` (UUID string) | pager_id (FK), pillar_number, pillar_weight |
 | `pillar_initiative` | `pillar_initiative_id` (INTEGER auto-increment) | initiative_id (UUID), pillar_id (FK), image_urls (JSON) |
-| `metadata` | `metadata_id` (INTEGER) | market, retailer, channel, category, campaign |
+| `metadata` | `metadata_id` (INTEGER auto-increment) | market (unique), retailer (JSON array), channel (JSON array), category (JSON array) |
+| `campaign` | `campaign_id` (UUID string) | market, campaign_name, created_by, created_at |
 
 ---
 

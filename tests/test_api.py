@@ -445,11 +445,18 @@ def _seed_test_metadata(db):
     from app.utils.helpers import generate_uuid, utcnow
 
     meta_rows = [
-        Metadata(market="India", retailer="South", channel="Retail",    category="Category A"),
-        Metadata(market="India", retailer="South", channel="Online",    category="Category A"),
-        Metadata(market="India", retailer="North", channel="Retail",    category="Category B"),
-        Metadata(market="USA",   retailer="West",  channel="Online",    category="Category A"),
-        Metadata(market="USA",   retailer="East",  channel="Retail",    category="Category C"),
+        Metadata(
+            market="India",
+            retailer=["South", "North"],
+            channel=["Retail", "Online"],
+            category=["Category A", "Category B"],
+        ),
+        Metadata(
+            market="USA",
+            retailer=["West", "East"],
+            channel=["Online", "Retail"],
+            category=["Category A", "Category C"],
+        ),
     ]
     db.add_all(meta_rows)
 
@@ -463,25 +470,27 @@ def _seed_test_metadata(db):
     db.flush()
 
 
-def test_metadata_cascading_basic(client, db):
-    """Test 15: Metadata filter returns expected distinct values including campaigns filtered by market."""
+def test_metadata_filter_single_market(client, db):
+    """Test 15: Metadata filter returns market-keyed dictionary containing arrays of strings."""
     _seed_test_metadata(db)
     resp = client.post("/api/v1/metadata/filter", json={"market": ["India"]})
     assert resp.status_code == 200
     data = resp.json()
-    assert "India" in data["market"]
-    # retailer should only contain India regions
-    for retailer in data["retailer"]:
-        assert retailer in ["South", "North"]
-    # campaign should only contain India campaigns
-    assert "India Festive 2026" in data["campaign"]
-    assert "India Monsoon 2026" in data["campaign"]
-    assert "USA Summer 2026" not in data["campaign"]
-    assert "UK Autumn 2026" not in data["campaign"]
+    assert "India" in data
+    assert "USA" not in data
+    india_data = data["India"]
+    assert "South" in india_data["retailer"]
+    assert "North" in india_data["retailer"]
+    assert "Retail" in india_data["channel"]
+    assert "Online" in india_data["channel"]
+    assert "Category A" in india_data["category"]
+    assert "Category B" in india_data["category"]
+    assert "India Festive 2026" in india_data["campaign"]
+    assert "India Monsoon 2026" in india_data["campaign"]
 
 
 def test_metadata_multi_select(client, db):
-    """Test 16: Multi-select returns union of values."""
+    """Test 16: Multi-select returns dictionary with selected markets."""
     _seed_test_metadata(db)
     resp = client.post(
         "/api/v1/metadata/filter",
@@ -489,27 +498,41 @@ def test_metadata_multi_select(client, db):
     )
     assert resp.status_code == 200
     data = resp.json()
-    regions = data["retailer"]
-    assert "South" in regions
-    assert "West" in regions or "East" in regions
-    assert "India Festive 2026" in data["campaign"]
-    assert "USA Summer 2026" in data["campaign"]
-    assert "UK Autumn 2026" not in data["campaign"]
+    assert "India" in data
+    assert "USA" in data
+    assert "South" in data["India"]["retailer"]
+    assert "West" in data["USA"]["retailer"]
+    assert "India Festive 2026" in data["India"]["campaign"]
+    assert "USA Summer 2026" in data["USA"]["campaign"]
 
 
 def test_metadata_empty_filter_returns_all(client, db):
-    """Test 17: Empty filter arrays return all distinct values."""
+    """Test 17: Empty filter returns all markets with their arrays."""
     _seed_test_metadata(db)
     resp = client.post("/api/v1/metadata/filter", json={})
     assert resp.status_code == 200
     data = resp.json()
-    assert "India" in data["market"]
-    assert "USA" in data["market"]
-    # All distinct campaigns returned when no market selected
-    assert "India Festive 2026" in data["campaign"]
-    assert "India Monsoon 2026" in data["campaign"]
-    assert "USA Summer 2026" in data["campaign"]
-    assert "UK Autumn 2026" in data["campaign"]
+    assert "India" in data
+    assert "USA" in data
+    assert "UK" in data
+    assert "India Festive 2026" in data["India"]["campaign"]
+    assert "USA Summer 2026" in data["USA"]["campaign"]
+    assert "UK Autumn 2026" in data["UK"]["campaign"]
+
+
+def test_metadata_get_all(client, db):
+    """Test 18: GET /metadata returns all markets and dimension arrays."""
+    _seed_test_metadata(db)
+    resp = client.get("/api/v1/metadata")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "India" in data
+    assert "USA" in data
+    assert "UK" in data
+    assert isinstance(data["India"]["retailer"], list)
+    assert isinstance(data["India"]["channel"], list)
+    assert isinstance(data["India"]["category"], list)
+    assert isinstance(data["India"]["campaign"], list)
 
 
 # ---------------------------------------------------------------------------

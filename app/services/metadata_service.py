@@ -1,63 +1,58 @@
-"""
-Metadata service — business logic for cascading filter API.
-"""
-
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import select, distinct
 
-from app.db.models.metadata import Metadata
-from app.db.models.pager import Pager
 from app.repositories.metadata_repository import metadata_repository
 from app.repositories.campaign_repository import campaign_repository
-from app.schemas.metadata_schema import MetadataFilterRequest, MetadataFilterResponse
-from app.utils.enums import PagerStatus
+from app.schemas.metadata_schema import (
+    MarketMetadataItem,
+    MetadataFilterRequest,
+)
 
 
 class MetadataService:
 
     def get_cascading_filters(
-        self, db: Session, request: MetadataFilterRequest
-    ) -> MetadataFilterResponse:
+        self, db: Session, request: Optional[MetadataFilterRequest] = None
+    ) -> Dict[str, MarketMetadataItem]:
         """
-        Returns distinct values for each metadata dimension
-        filtered by the provided multi-select values.
-        Campaigns are fetched from the campaign table (filtered by market if provided).
+        Returns a dictionary keyed by market name.
+        Each market object contains arrays of strings for retailer, channel, category, and campaign.
+        If request.market is provided, filters for those markets only; otherwise returns all.
         """
-        result = metadata_repository.get_filtered_values(
-            db,
-            market=request.market or [],
-            retailer=request.retailer or [],
-            channel=request.channel or [],
-            category=request.category or [],
+        market_filters = request.market if request and request.market else None
+        meta_records = metadata_repository.get_by_markets(db, markets=market_filters)
+        campaigns_by_market = campaign_repository.get_campaign_names_by_market(
+            db, market=market_filters
         )
 
-        # Campaigns come from the campaign table (filtered by market if provided)
-        campaigns = campaign_repository.get_distinct_campaign_names(
-            db, market=request.market or []
-        )
+        response: Dict[str, MarketMetadataItem] = {}
 
-        # pager_type and status come from the pager table
-        pager_types = self._get_pager_distinct(db, Pager.pager_type, request.pager_type)
-        statuses = self._get_pager_distinct(db, Pager.status, request.status)
+        # Populate from metadata records
+        for meta in meta_records:
+            m_name = meta.market
+            retailer_list = meta.retailer if isinstance(meta.retailer, list) else []
+            channel_list = meta.channel if isinstance(meta.channel, list) else []
+            category_list = meta.category if isinstance(meta.category, list) else []
+            campaign_list = campaigns_by_market.get(m_name, [])
 
-        return MetadataFilterResponse(
-            market=result["market"],
-            retailer=result["retailer"],
-            channel=result["channel"],
-            category=result["category"],
-            campaign=campaigns,
-            pager_type=pager_types,
-            status=statuses,
-        )
+            response[m_name] = MarketMetadataItem(
+                retailer=retailer_list,
+                channel=channel_list,
+                category=category_list,
+                campaign=campaign_list,
+            )
 
-    def _get_pager_distinct(
-        self, db: Session, column, filter_values: Optional[List[str]]
-    ) -> List[str]:
-        stmt = select(distinct(column)).where(column.isnot(None))
-        if filter_values:
-            stmt = stmt.where(column.in_(filter_values))
-        return sorted(str(v) for v in db.scalars(stmt).all() if v is not None)
+        # Include any markets that might only be in campaigns table if not already populated
+        for c_market, c_list in campaigns_by_market.items():
+            if c_market not in response:
+                response[c_market] = MarketMetadataItem(
+                    retailer=[],
+                    channel=[],
+                    category=[],
+                    campaign=c_list,
+                )
+
+        return response
 
 
 metadata_service = MetadataService()

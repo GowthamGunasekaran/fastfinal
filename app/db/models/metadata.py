@@ -5,7 +5,8 @@ Each row represents one valid combination of metadata dimensions.
 The frontend uses this table for cascading dropdown filters.
 """
 
-from sqlalchemy import Integer, String
+from typing import List
+from sqlalchemy import Integer, String, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
@@ -17,7 +18,7 @@ class Metadata(Base):
     metadata_id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True
     )
-    market: Mapped[str] = mapped_column(String(100), nullable=False)
-    retailer: Mapped[str] = mapped_column(String(100), nullable=False)
-    channel: Mapped[str] = mapped_column(String(100), nullable=False)
-    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    market: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    retailer: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    channel: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    category: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)

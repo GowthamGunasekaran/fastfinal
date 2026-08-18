@@ -2,24 +2,33 @@
 Pydantic v2 schemas for Metadata cascading filter API.
 """
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel
+
+
+class MarketMetadataItem(BaseModel):
+    """
+    Metadata dimensions and campaigns for a single market.
+    """
+    retailer: List[str] = []
+    channel: List[str] = []
+    category: List[str] = []
+    campaign: List[str] = []
 
 
 class MetadataOut(BaseModel):
     metadata_id: int
     market: str
-    retailer: str
-    channel: str
-    category: str
+    retailer: List[str] = []
+    channel: List[str] = []
+    category: List[str] = []
 
     model_config = {"from_attributes": True}
 
 
 class MetadataFilterRequest(BaseModel):
     """
-    Multi-select cascading filter request.
-    Empty list means no filter (return all distinct values).
+    Filter request. Empty market list or omitting market returns all markets.
     """
     market: Optional[List[str]] = []
     retailer: Optional[List[str]] = []
@@ -30,15 +39,5 @@ class MetadataFilterRequest(BaseModel):
     status: Optional[List[str]] = []
 
 
-class MetadataFilterResponse(BaseModel):
-    """
-    Returns distinct available values for each dimension
-    based on the selected filters (cascading behavior).
-    """
-    market: List[str] = []
-    retailer: List[str] = []
-    channel: List[str] = []
-    category: List[str] = []
-    campaign: List[str] = []
-    pager_type: List[str] = []
-    status: List[str] = []
+# Type alias for dictionary response mapping market -> MarketMetadataItem
+MetadataDictResponse = Dict[str, MarketMetadataItem]

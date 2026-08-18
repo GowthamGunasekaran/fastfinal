@@ -50,6 +50,27 @@ class CampaignRepository:
                 stmt = stmt.where(Campaign.market.in_(flattened_markets))
         return sorted(db.scalars(stmt).all())
 
+    def get_campaign_names_by_market(
+        self, db: Session, market: Optional[List[str]] = None
+    ) -> dict:
+        stmt = select(Campaign.market, Campaign.campaign_name).distinct()
+        if market:
+            flattened_markets = []
+            for m in market:
+                if m:
+                    flattened_markets.extend([x.strip() for x in m.split(",") if x.strip()])
+            if flattened_markets:
+                stmt = stmt.where(Campaign.market.in_(flattened_markets))
+        rows = db.execute(stmt).all()
+        result: dict = {}
+        for m_name, c_name in rows:
+            if m_name not in result:
+                result[m_name] = []
+            result[m_name].append(c_name)
+        for m_name in result:
+            result[m_name] = sorted(result[m_name])
+        return result
+
     def count(self, db: Session, market: Optional[List[str]] = None) -> int:
         from sqlalchemy import func
         stmt = select(func.count()).select_from(Campaign)

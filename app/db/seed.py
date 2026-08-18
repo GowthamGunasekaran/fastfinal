@@ -18,11 +18,24 @@ from app.utils.enums import ScoringMode, PagerStatus
 
 
 METADATA_ROWS = [
-    {"market": "India",  "retailer": "South", "channel": "Retail",     "category": "Category A"},
-    {"market": "India",  "retailer": "South", "channel": "Online",     "category": "Category A"},
-    {"market": "India",  "retailer": "North", "channel": "Retail",     "category": "Category B"},
-    {"market": "USA",    "retailer": "West",  "channel": "Online",     "category": "Category A"},
-    {"market": "USA",    "retailer": "East",  "channel": "Retail",     "category": "Category C"},
+    {
+        "market": "India",
+        "retailer": ["North", "South"],
+        "channel": ["Online", "Retail"],
+        "category": ["Category A", "Category B"],
+    },
+    {
+        "market": "USA",
+        "retailer": ["East", "West"],
+        "channel": ["Online", "Retail"],
+        "category": ["Category A", "Category C"],
+    },
+    {
+        "market": "UK",
+        "retailer": ["Central", "London"],
+        "channel": ["Online", "Retail"],
+        "category": ["Category A", "Category B"],
+    },
 ]
 
 CAMPAIGN_ROWS = [
@@ -57,7 +70,7 @@ def seed_metadata(db: Session) -> None:
     for row in METADATA_ROWS:
         db.add(Metadata(**row))
     db.flush()
-    print(f"  ✓ Seeded {len(METADATA_ROWS)} metadata rows")
+    print(f"  + Seeded {len(METADATA_ROWS)} metadata rows")
 
 
 def seed_campaigns(db: Session) -> None:
@@ -75,7 +88,7 @@ def seed_campaigns(db: Session) -> None:
             created_at=utcnow(),
         ))
     db.flush()
-    print(f"  ✓ Seeded {len(CAMPAIGN_ROWS)} campaign rows")
+    print(f"  + Seeded {len(CAMPAIGN_ROWS)} campaign rows")
 
 
 def seed_published_pager(db: Session) -> None:
@@ -154,7 +167,7 @@ def seed_published_pager(db: Session) -> None:
             db.add(initiative)
 
     db.flush()
-    print("  ✓ Seeded 1 published Pager with 5 Pillars, 15 Initiatives, 45 image URLs")
+    print("  + Seeded 1 published Pager with 5 Pillars, 15 Initiatives, 45 image URLs")
 
 
 def run_seed(db: Session) -> None:
