@@ -23,6 +23,13 @@ class StorageService:
         self.project_id = os.getenv("GCP_PROJECT_ID", "").strip()
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "").strip()
         self.expiration_minutes = int(os.getenv("GCS_SIGNED_URL_EXPIRATION_MINUTES", "60"))
+        self.timeout_seconds = int(os.getenv("GCS_TIMEOUT_SECONDS", "30"))
+        self.verify_ssl = os.getenv("GCS_VERIFY_SSL", "true").lower() not in ("false", "0", "no")
+        self.ca_bundle = (
+            os.getenv("GCS_CA_BUNDLE", "").strip()
+            or os.getenv("REQUESTS_CA_BUNDLE", "").strip()
+            or os.getenv("SSL_CERT_FILE", "").strip()
+        )
         self._client = None
 
     def _get_client(self):
@@ -31,6 +38,8 @@ class StorageService:
         1. Explicit Service Account JSON file path (GOOGLE_APPLICATION_CREDENTIALS or GCP_SERVICE_ACCOUNT_PATH)
         2. Service Account JSON string (GCP_SERVICE_ACCOUNT_JSON)
         3. Application Default Credentials (ADC) fallback with GCP Project ID.
+
+        Supports custom SSL verification (GCS_VERIFY_SSL=false) and CA bundles (GCS_CA_BUNDLE / REQUESTS_CA_BUNDLE).
         """
         if self._client is not None:
             return self._client
@@ -44,6 +53,14 @@ class StorageService:
         try:
             from google.cloud import storage
             from google.oauth2 import service_account
+            import requests
+            import urllib3
+
+            verify_setting = self.ca_bundle if (self.ca_bundle and os.path.exists(self.ca_bundle)) else self.verify_ssl
+
+            if not self.verify_ssl:
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                logger.info("SSL certificate verification is disabled for GCS client (GCS_VERIFY_SSL=false)")
 
             sa_file = (
                 os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
@@ -60,10 +77,15 @@ class StorageService:
                 info = json.loads(sa_json_str)
                 credentials = service_account.Credentials.from_service_account_info(info)
 
+            # Build AuthorizedSession or custom requests Session to control SSL verification & timeouts
             if credentials:
-                self._client = storage.Client(project=project, credentials=credentials)
+                from google.auth.transport.requests import AuthorizedSession
+                http_session = AuthorizedSession(credentials)
             else:
-                self._client = storage.Client(project=project)
+                http_session = requests.Session()
+
+            http_session.verify = verify_setting
+            self._client = storage.Client(project=project, credentials=credentials, _http=http_session)
 
             return self._client
         except Exception as e:
@@ -130,13 +152,22 @@ class StorageService:
                 try:
                     bucket = client.bucket(bucket_name)
                     target_blob = bucket.blob(blob_name)
-                    target_blob.upload_from_string(file_bytes, content_type=content_type)
+                    target_blob.upload_from_string(
+                        file_bytes,
+                        content_type=content_type,
+                        timeout=self.timeout_seconds,
+                    )
                 except Exception as e:
-                    logger.error(f"GCS upload failed for file {file.filename}: {e}")
+                    error_msg = str(e)
+                    logger.error(f"GCS upload failed for file {file.filename}: {error_msg}")
+                    if "SSL" in error_msg or "certificate" in error_msg.lower() or "CERTIFICATE_VERIFY_FAILED" in error_msg:
+                        logger.error(
+                            "SSL Certificate Verification Failed. Set GCS_VERIFY_SSL=false in .env or configure python-certifi-win32/REQUESTS_CA_BUNDLE."
+                        )
                     if os.getenv("APP_ENV") == "production":
                         raise HTTPException(
                             status_code=status.HTTP_502_BAD_GATEWAY,
-                            detail=f"Cloud Storage upload failed for file {file.filename}: {str(e)}",
+                            detail=f"Cloud Storage upload failed for file {file.filename}: {error_msg}",
                         )
 
             signed_url = self._generate_signed_url(target_blob, blob_name, bucket_name)
