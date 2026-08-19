@@ -1227,14 +1227,47 @@ def test_update_track_only_requested_column_changes(client):
 # ===========================================================================
 
 def test_upload_image_success(client):
-    """Test uploading an image file successfully and receiving a signed URL."""
+    """Test uploading a single image file successfully and receiving a signed URL and urls list."""
     fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
     files = {"file": ("test_logo.png", fake_png, "image/png")}
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 201
     body = resp.json()
     assert "url" in body
+    assert "urls" in body
+    assert len(body["urls"]) == 1
     assert body["url"].startswith("http")
+    assert body["urls"][0] == body["url"]
+
+
+def test_upload_multiple_images_success(client):
+    """Test uploading 3 image files (array of files) in a single request."""
+    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
+    files = [
+        ("files", ("img1.png", fake_png, "image/png")),
+        ("files", ("img2.jpg", fake_png, "image/jpeg")),
+        ("files", ("img3.webp", fake_png, "image/webp")),
+    ]
+    resp = client.post("/api/v1/upload", files=files)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert "urls" in body
+    assert len(body["urls"]) == 3
+    assert body["url"] == body["urls"][0]
+
+
+def test_upload_more_than_3_images_rejected(client):
+    """Test that uploading more than 3 image files in a request is rejected."""
+    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
+    files = [
+        ("files", ("img1.png", fake_png, "image/png")),
+        ("files", ("img2.png", fake_png, "image/png")),
+        ("files", ("img3.png", fake_png, "image/png")),
+        ("files", ("img4.png", fake_png, "image/png")),
+    ]
+    resp = client.post("/api/v1/upload", files=files)
+    assert resp.status_code == 400
+    assert "Maximum of 3 image files" in resp.json()["detail"]
 
 
 def test_upload_image_invalid_type_rejected(client):
@@ -1243,7 +1276,7 @@ def test_upload_image_invalid_type_rejected(client):
     files = {"file": ("test.txt", fake_txt, "text/plain")}
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 400
-    assert "Only image files" in resp.json()["detail"]
+    assert "not an image file" in resp.json()["detail"] or "Only image files" in resp.json()["detail"]
 
 
 def test_upload_image_empty_file_rejected(client):
@@ -1252,6 +1285,7 @@ def test_upload_image_empty_file_rejected(client):
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 400
     assert "empty" in resp.json()["detail"]
+
 
 
 # ===========================================================================

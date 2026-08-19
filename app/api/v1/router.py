@@ -2,7 +2,7 @@
 API v1 router — all routes registered here and included in main.py.
 """
 
-from fastapi import APIRouter, Depends, Query, File, UploadFile, status
+from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 
@@ -277,21 +277,38 @@ def list_campaigns(
 
 
 # ==========================================================================
-# STORAGE / IMAGE UPLOAD (Single API)
+# STORAGE / IMAGE UPLOAD (Single / Batch API)
 # ==========================================================================
 
 @router.post(
     "/upload",
     response_model=ImageUploadResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload image to GCP Cloud Storage and get signed URL",
+    summary="Upload image(s) to GCP Cloud Storage and get signed URLs (up to 3 files)",
     tags=["Upload"],
 )
-async def upload_image(file: UploadFile = File(..., description="Image file to upload")):
+async def upload_images(
+    files: Optional[List[UploadFile]] = File(None, description="Array of image files to upload (up to 3 files)"),
+    file: Optional[UploadFile] = File(None, description="Single image file to upload (backwards compatibility)"),
+):
     """
-    Upload an image from React to private GCP Cloud Storage and return its signed URL.
+    Upload image(s) to private GCP Cloud Storage and return an array of signed URLs.
+    Accepts up to 3 image files in a single request.
     """
-    return await storage_service.upload_image(file=file)
+    upload_list: List[UploadFile] = []
+    if files:
+        upload_list.extend(files)
+    if file:
+        upload_list.append(file)
+
+    if not upload_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided for upload.",
+        )
+
+    return await storage_service.upload_images(files=upload_list)
+
 
 
 
