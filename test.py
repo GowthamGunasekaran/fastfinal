@@ -1,99 +1,55 @@
 import os
 import uuid
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, File, UploadFile, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
+import traceback
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
 from google.cloud import storage
 
-# --- Configuration ---
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-gcp-project-id")
-BUCKET_NAME = os.getenv("GCP_BUCKET_NAME", "your-bucket-name")
-SERVICE_ACCOUNT_KEY_PATH = os.getenv("GCP_KEY_PATH", "path/to/service-account.json")
+app = FastAPI()
 
-storage_client = None
-bucket = None
+# Replace with your actual GCP Project ID and Bucket ID (or pass via Environment Variables)
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-gcp-project-id")
+GCP_BUCKET_ID = os.getenv("GCP_BUCKET_ID", "your-gcp-bucket-id")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global storage_client, bucket
-    # Initialize GCS client once on startup to reuse connection pools
-    storage_client = storage.Client.from_service_account_json(
-        SERVICE_ACCOUNT_KEY_PATH, project=PROJECT_ID
-    )
-    bucket = storage_client.bucket(BUCKET_NAME)
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
-
-# Allow React app access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-def _upload_single_to_gcp(file: UploadFile) -> dict:
-    """Streams a single file directly into Google Cloud Storage."""
+@app.post("/upload")
+def upload_image_to_gcp(file: UploadFile = File(...)):
     try:
-        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-        unique_blob_name = f"uploads/{uuid.uuid4().hex}.{ext}"
+        # Establish connection directly using GCP environment credentials
+        storage_client = storage.Client(project=GCP_PROJECT_ID)
+        bucket = storage_client.bucket(GCP_BUCKET_ID)
 
-        blob = bucket.blob(unique_blob_name)
+        # Generate a unique filename to avoid overwrites
+        file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        blob_name = f"{uuid.uuid4().hex}.{file_ext}"
+        blob = bucket.blob(blob_name)
 
-        # Upload directly from the memory/spool buffer
+        # Upload the file stream directly into the GCP bucket
         blob.upload_from_file(
             file.file,
             content_type=file.content_type,
-            rewind=True,
+            rewind=True
         )
 
-        # Direct GCS Public URL
-        public_url = f"https://storage.googleapis.com/{BUCKET_NAME}/{unique_blob_name}"
-
-        return {
-            "original_name": file.filename,
-            "filename": unique_blob_name,
-            "url": public_url,
-        }
-    finally:
-        file.file.close()
-
-
-@app.post("/upload-images", status_code=status.HTTP_201_CREATED)
-def upload_images(files: list[UploadFile] = File(...)):
-    # 1. Enforce 1-3 images constraint
-    if len(files) < 1 or len(files) > 3:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You must upload between 1 and 3 images.",
-        )
-
-    # 2. Validate MIME types
-    for file in files:
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File '{file.filename}' is not a valid image.",
-            )
-
-    # 3. Parallel upload using threads (reduces 3-image upload time to ~1 image duration)
-    try:
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            uploaded_results = list(executor.map(_upload_single_to_gcp, files))
+        # Construct the GCP URL
+        gcp_url = f"https://storage.googleapis.com/{GCP_BUCKET_ID}/{blob_name}"
 
         return {
             "status": "success",
-            "count": len(uploaded_results),
-            "data": uploaded_results,
+            "filename": blob_name,
+            "url": gcp_url
         }
+
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"GCS Upload failed: {str(e)}",
+        # Catch and return the exact error message and stack trace for debugging
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "traceback": traceback.format_exc()
+            }
         )
+    finally:
+        file.file.close()
