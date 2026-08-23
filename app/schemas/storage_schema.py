@@ -7,6 +7,5 @@ from pydantic import BaseModel, Field
 
 
 class ImageUploadResponse(BaseModel):
-    urls: List[str] = Field(default_factory=list, description="Array of signed URLs of uploaded images")
-    url: Optional[str] = Field(None, description="Primary signed URL of the uploaded image (for backwards compatibility)")
-
+    urls: List[str] = Field(default_factory=list, description="Array of public URLs of uploaded images")
+    url: Optional[str] = Field(None, description="Primary public URL of the uploaded image (for backwards compatibility)")

@@ -148,7 +148,12 @@ def update_pager_status(
     - DELETED / ARCHIVED: soft status change only.
     """
     return pager_service.update_status(
-        db, pager_id, payload.status, payload.updated_by
+        db,
+        pager_id,
+        payload.status,
+        updated_by=payload.updated_by,
+        published_by=payload.published_by,
+        published_at=payload.published_at,
     )
 
 
@@ -284,7 +289,7 @@ def list_campaigns(
     "/upload",
     response_model=ImageUploadResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload image(s) to GCP Cloud Storage and get signed URLs (up to 3 files)",
+    summary="Upload image(s) to GCP Cloud Storage and get public URLs (up to 3 files)",
     tags=["Upload"],
 )
 async def upload_images(
@@ -292,7 +297,7 @@ async def upload_images(
     file: Optional[UploadFile] = File(None, description="Single image file to upload (backwards compatibility)"),
 ):
     """
-    Upload image(s) to private GCP Cloud Storage and return an array of signed URLs.
+    Upload image(s) to GCP Cloud Storage and return an array of public URLs.
     Accepts up to 3 image files in a single request.
     """
     upload_list: List[UploadFile] = []

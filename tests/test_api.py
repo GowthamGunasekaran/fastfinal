@@ -1424,5 +1424,59 @@ def test_upsert_metadata_with_accountable_table_alias(client):
     assert data["accountable_team"] == ["Supply Chain", "Finance"]
 
 
+def test_create_pager_with_published_fields(client):
+    """Test POST /api/v1/pagers handles published_by and published_at."""
+    payload = _minimal_pager()
+    payload["published_by"] = "author-john"
+    payload["published_at"] = "2026-08-23T10:00:00Z"
+
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["published_by"] == "author-john"
+    assert data["published_at"] is not None
+    assert "2026-08-23" in data["published_at"]
+
+
+def test_status_update_with_published_fields(client):
+    """Test PATCH /api/v1/pagers/{pager_id}/status persists published_by and published_at."""
+    payload = _full_pager()
+    pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
+
+    resp = client.patch(
+        f"/api/v1/pagers/{pager_id}/status",
+        json={
+            "status": "PUBLISHED",
+            "updated_by": "editor-jane",
+            "published_by": "publisher-alice",
+            "published_at": "2026-08-23T15:30:00Z",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "PUBLISHED"
+    assert data["published_by"] == "publisher-alice"
+    assert "2026-08-23" in data["published_at"]
+
+
+def test_update_pager_with_published_fields(client):
+    """Test PATCH /api/v1/pagers/{pager_id} updates published_by and published_at."""
+    payload = _minimal_pager()
+    pager_id = client.post("/api/v1/pagers", json=payload).json()["pager_id"]
+
+    resp = client.patch(
+        f"/api/v1/pagers/{pager_id}",
+        json={
+            "published_by": "publisher-bob",
+            "published_at": "2026-08-23T18:00:00Z",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["published_by"] == "publisher-bob"
+    assert "2026-08-23" in data["published_at"]
+
+
+
 
 

@@ -54,6 +54,15 @@ class PagerService:
             for init_data in pillar_data.initiatives or []:
                 validate_image_urls(init_data.image_urls or [])
 
+        published_by = payload.published_by
+        published_at = payload.published_at
+
+        if payload.status == PagerStatus.PUBLISHED:
+            if published_by is None:
+                published_by = payload.created_by
+            if published_at is None:
+                published_at = utcnow()
+
         # Create pager
         pager = Pager(
             pager_id=generate_uuid(),
@@ -70,6 +79,8 @@ class PagerService:
             pager_type=payload.pager_type,
             image_url=payload.image_url,
             created_by=payload.created_by,
+            published_by=published_by,
+            published_at=published_at,
             created_at=utcnow(),
             updated_at=utcnow(),
         )
@@ -177,6 +188,12 @@ class PagerService:
         for field, value in update_data.items():
             setattr(pager, field, value)
         pager.updated_at = utcnow()
+
+        if pager.status == PagerStatus.PUBLISHED:
+            if pager.published_by is None:
+                pager.published_by = payload.updated_by or pager.created_by
+            if pager.published_at is None:
+                pager.published_at = utcnow()
 
         # Handle pillars if provided
         if payload.pillars is not None:
@@ -325,7 +342,13 @@ class PagerService:
     # ------------------------------------------------------------------
 
     def update_status(
-        self, db: Session, pager_id: str, new_status: PagerStatus, updated_by: Optional[str]
+        self,
+        db: Session,
+        pager_id: str,
+        new_status: PagerStatus,
+        updated_by: Optional[str] = None,
+        published_by: Optional[str] = None,
+        published_at: Optional[datetime] = None,
     ) -> Pager:
         pager = pager_repository.get_by_id(db, pager_id)
         if not pager:
@@ -333,10 +356,17 @@ class PagerService:
 
         self._validate_status_transition(pager, new_status)
 
+        if published_by is not None:
+            pager.published_by = published_by
+        if published_at is not None:
+            pager.published_at = published_at
+
         if new_status == PagerStatus.PUBLISHED:
             self._validate_for_publish(pager)
-            pager.published_by = updated_by
-            pager.published_at = utcnow()
+            if pager.published_by is None:
+                pager.published_by = published_by if published_by is not None else updated_by
+            if pager.published_at is None:
+                pager.published_at = published_at if published_at is not None else utcnow()
 
         pager.status = new_status
         pager.updated_by = updated_by
