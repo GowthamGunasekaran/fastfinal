@@ -450,12 +450,24 @@ def _seed_test_metadata(db):
             retailer=["South", "North"],
             channel=["Retail", "Online"],
             category=["Category A", "Category B"],
+            accountable_team=["HR", "Sales"],
+            pillar_kpi_1=["KPI 1A", "KPI 1B"],
+            pillar_kpi_2=["KPI 2A"],
+            pillar_kpi_3=["KPI 3A"],
+            pillar_kpi_4=["KPI 4A"],
+            pillar_kpi_5=["KPI 5A"],
         ),
         Metadata(
             market="USA",
             retailer=["West", "East"],
             channel=["Online", "Retail"],
             category=["Category A", "Category C"],
+            accountable_team=["Marketing", "Operations"],
+            pillar_kpi_1=["KPI 1C"],
+            pillar_kpi_2=["KPI 2B"],
+            pillar_kpi_3=["KPI 3B"],
+            pillar_kpi_4=["KPI 4B"],
+            pillar_kpi_5=["KPI 5B"],
         ),
     ]
     db.add_all(meta_rows)
@@ -1354,6 +1366,63 @@ def test_upsert_metadata_empty_market_validation_error(client):
     resp = client.post("/api/v1/metadata", json={"market": "  ", "retailer": ["REWE"]})
     assert resp.status_code == 400
     assert "Market name cannot be empty" in resp.json()["detail"]
+
+
+def test_upsert_metadata_with_new_array_columns_and_campaign(client):
+    """Test POST /api/v1/metadata with accountable_team, pillar_kpi_1..5, and campaign."""
+    payload = {
+        "market": "Japan",
+        "retailer": ["7-Eleven", "FamilyMart"],
+        "channel": ["Convenience", "Online"],
+        "category": ["Beverages"],
+        "campaign": ["Spring Promo 2026"],
+        "accountable_team": ["Sales", "Marketing"],
+        "pillar_kpi_1": ["KPI 1A", "KPI 1B"],
+        "pillar_kpi_2": ["KPI 2A"],
+        "pillar_kpi_3": ["KPI 3A"],
+        "pillar_kpi_4": ["KPI 4A"],
+        "pillar_kpi_5": ["KPI 5A"],
+    }
+    resp = client.post("/api/v1/metadata", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["market"] == "Japan"
+    assert data["accountable_team"] == ["Sales", "Marketing"]
+    assert data["pillar_kpi_1"] == ["KPI 1A", "KPI 1B"]
+    assert data["pillar_kpi_5"] == ["KPI 5A"]
+    assert data["campaign"] == ["Spring Promo 2026"]
+
+    # Verify via GET /api/v1/metadata
+    get_resp = client.get("/api/v1/metadata")
+    assert get_resp.status_code == 200
+    all_meta = get_resp.json()
+    assert "Japan" in all_meta
+    japan_meta = all_meta["Japan"]
+    assert japan_meta["accountable_team"] == ["Sales", "Marketing"]
+    assert japan_meta["pillar_kpi_1"] == ["KPI 1A", "KPI 1B"]
+    assert japan_meta["pillar_kpi_2"] == ["KPI 2A"]
+    assert japan_meta["pillar_kpi_3"] == ["KPI 3A"]
+    assert japan_meta["pillar_kpi_4"] == ["KPI 4A"]
+    assert japan_meta["pillar_kpi_5"] == ["KPI 5A"]
+    assert japan_meta["campaign"] == ["Spring Promo 2026"]
+
+
+def test_upsert_metadata_with_accountable_table_alias(client):
+    """Test POST /api/v1/metadata using accountable_table as alias for accountable_team."""
+    payload = {
+        "market": "France",
+        "retailer": ["Carrefour"],
+        "channel": ["Retail"],
+        "category": ["Food"],
+        "accountable_table": ["Supply Chain", "Finance"],
+        "pillar_kpi_1": ["KPI 1X"],
+    }
+    resp = client.post("/api/v1/metadata", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["market"] == "France"
+    assert data["accountable_team"] == ["Supply Chain", "Finance"]
+
 
 
 

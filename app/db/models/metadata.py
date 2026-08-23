@@ -22,3 +22,10 @@ class Metadata(Base):
     retailer: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     channel: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     category: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    accountable_team: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    pillar_kpi_1: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    pillar_kpi_2: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    pillar_kpi_3: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    pillar_kpi_4: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+    pillar_kpi_5: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
+

@@ -46,12 +46,31 @@ class MetadataRepository:
         retailer: List[str],
         channel: List[str],
         category: List[str],
+        accountable_team: Optional[List[str]] = None,
+        pillar_kpi_1: Optional[List[str]] = None,
+        pillar_kpi_2: Optional[List[str]] = None,
+        pillar_kpi_3: Optional[List[str]] = None,
+        pillar_kpi_4: Optional[List[str]] = None,
+        pillar_kpi_5: Optional[List[str]] = None,
     ) -> Metadata:
+        acc_team = accountable_team if accountable_team is not None else []
+        pk1 = pillar_kpi_1 if pillar_kpi_1 is not None else []
+        pk2 = pillar_kpi_2 if pillar_kpi_2 is not None else []
+        pk3 = pillar_kpi_3 if pillar_kpi_3 is not None else []
+        pk4 = pillar_kpi_4 if pillar_kpi_4 is not None else []
+        pk5 = pillar_kpi_5 if pillar_kpi_5 is not None else []
+
         existing = self.get_by_market(db, market)
         if existing:
             existing.retailer = retailer
             existing.channel = channel
             existing.category = category
+            existing.accountable_team = acc_team
+            existing.pillar_kpi_1 = pk1
+            existing.pillar_kpi_2 = pk2
+            existing.pillar_kpi_3 = pk3
+            existing.pillar_kpi_4 = pk4
+            existing.pillar_kpi_5 = pk5
             db.flush()
             return existing
         else:
@@ -60,6 +79,12 @@ class MetadataRepository:
                 retailer=retailer,
                 channel=channel,
                 category=category,
+                accountable_team=acc_team,
+                pillar_kpi_1=pk1,
+                pillar_kpi_2=pk2,
+                pillar_kpi_3=pk3,
+                pillar_kpi_4=pk4,
+                pillar_kpi_5=pk5,
             )
             db.add(meta)
             db.flush()

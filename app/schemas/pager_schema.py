@@ -27,6 +27,8 @@ class PagerCreate(BaseModel):
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
     created_by: Optional[str] = None
+    published_by: Optional[str] = None
+    published_at: Optional[datetime] = None
     pillars: Optional[List[PillarCreate]] = Field(default_factory=list)
 
 
@@ -40,16 +42,21 @@ class PagerUpdate(BaseModel):
     campaign_focus: Optional[str] = None
     business_outcome_statement: Optional[str] = None
     scoring_mode: Optional[ScoringMode] = None
+    status: Optional[PagerStatus] = None
     track: Optional[str] = None
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
     updated_by: Optional[str] = None
+    published_by: Optional[str] = None
+    published_at: Optional[datetime] = None
     pillars: Optional[List[PillarUpdate]] = None
 
 
 class StatusUpdate(BaseModel):
     status: PagerStatus
     updated_by: Optional[str] = None
+    published_by: Optional[str] = None
+    published_at: Optional[datetime] = None
 
 
 class PagerOut(BaseModel):
