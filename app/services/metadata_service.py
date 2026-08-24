@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from app.repositories.metadata_repository import metadata_repository
 from app.repositories.campaign_repository import campaign_repository
-from app.db.models.campaign import Campaign
+from app.models.campaign import Campaign
 from app.utils.helpers import generate_uuid, utcnow
 from app.schemas.metadata_schema import (
     MarketMetadataItem,

@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
 
-from app.db.models.campaign import Campaign
+from app.models.campaign import Campaign
 
 
 class CampaignRepository:

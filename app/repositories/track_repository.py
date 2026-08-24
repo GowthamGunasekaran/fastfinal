@@ -12,9 +12,9 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models.pager import Pager
-from app.db.models.pillar import Pillar
-from app.db.models.pillar_initiative import PillarInitiative
+from app.models.pager import Pager
+from app.models.pillar import Pillar
+from app.models.pillar_initiative import PillarInitiative
 
 
 class TrackRepository:

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.db.models.pillar import Pillar
+from app.models.pillar import Pillar
 
 
 class PillarRepository:

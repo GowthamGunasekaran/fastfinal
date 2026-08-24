@@ -28,4 +28,3 @@ class Metadata(Base):
     pillar_kpi_3: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     pillar_kpi_4: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     pillar_kpi_5: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
-

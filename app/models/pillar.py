@@ -12,8 +12,8 @@ from app.db.database import Base
 from app.utils.helpers import generate_uuid, utcnow
 
 if TYPE_CHECKING:
-    from app.db.models.pager import Pager
-    from app.db.models.pillar_initiative import PillarInitiative
+    from app.models.pager import Pager
+    from app.models.pillar_initiative import PillarInitiative
 
 
 class Pillar(Base):

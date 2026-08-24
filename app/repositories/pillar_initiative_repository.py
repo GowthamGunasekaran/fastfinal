@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.db.models.pillar_initiative import PillarInitiative
+from app.models.pillar_initiative import PillarInitiative
 
 
 class PillarInitiativeRepository:

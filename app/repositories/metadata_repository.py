@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
 
-from app.db.models.metadata import Metadata
+from app.models.metadata import Metadata
 
 
 class MetadataRepository:

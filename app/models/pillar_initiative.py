@@ -15,7 +15,7 @@ from app.db.database import Base
 from app.utils.helpers import generate_uuid, utcnow
 
 if TYPE_CHECKING:
-    from app.db.models.pillar import Pillar
+    from app.models.pillar import Pillar
 
 
 class PillarInitiative(Base):

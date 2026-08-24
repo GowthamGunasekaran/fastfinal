@@ -11,9 +11,9 @@ from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models.pager import Pager
-from app.db.models.pillar import Pillar
-from app.db.models.pillar_initiative import PillarInitiative
+from app.models.pager import Pager
+from app.models.pillar import Pillar
+from app.models.pillar_initiative import PillarInitiative
 from app.repositories.pager_repository import pager_repository
 from app.repositories.pillar_repository import pillar_repository
 from app.repositories.pillar_initiative_repository import initiative_repository

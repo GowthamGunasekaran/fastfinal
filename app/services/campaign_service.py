@@ -5,7 +5,7 @@ Campaign service — business logic for Campaign endpoints.
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from app.db.models.campaign import Campaign
+from app.models.campaign import Campaign
 from app.repositories.campaign_repository import campaign_repository
 from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
 

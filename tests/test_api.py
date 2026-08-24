@@ -440,8 +440,8 @@ def test_deleted_not_in_fetch_all(client):
 
 def _seed_test_metadata(db):
     """Seed metadata rows and campaign rows directly into the test database."""
-    from app.db.models.metadata import Metadata
-    from app.db.models.campaign import Campaign
+    from app.models.metadata import Metadata
+    from app.models.campaign import Campaign
     from app.utils.helpers import generate_uuid, utcnow
 
     meta_rows = [

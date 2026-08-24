@@ -15,26 +15,27 @@ load_dotenv()
 from app.db.database import engine, Base
 
 # Import all models so SQLAlchemy registers them before create_all
-from app.db.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa: F401
+from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa: F401
 
 from app.api.v1.router import router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Application lifespan: create tables and seed data on startup.
+    Application lifespan: create tables and seed data on startup (skip in test mode).
     """
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    if os.getenv("TESTING") != "1" and not os.getenv("DATABASE_URL", "").startswith("sqlite"):
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
 
-    # Seed development data
-    from app.db.database import SessionLocal
-    from app.db.seed import run_seed
-    db = SessionLocal()
-    try:
-        run_seed(db)
-    finally:
-        db.close()
+        # Seed development data
+        from app.db.database import SessionLocal
+        from app.db.seed import run_seed
+        db = SessionLocal()
+        try:
+            run_seed(db)
+        finally:
+            db.close()
 
     yield  # Application runs here
 

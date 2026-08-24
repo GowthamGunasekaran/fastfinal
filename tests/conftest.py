@@ -3,6 +3,12 @@ Pytest configuration — shared fixtures for all tests.
 Uses an in-memory SQLite database to avoid affecting the real database.
 """
 
+import os
+
+TEST_DATABASE_URL = "sqlite:///:memory:"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["TESTING"] = "1"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,8 +16,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base, get_db
 from app.main import app
-
-TEST_DATABASE_URL = "sqlite:///:memory:"
 
 test_engine = create_engine(
     TEST_DATABASE_URL,
@@ -27,7 +31,7 @@ TestSessionLocal = sessionmaker(
 def create_test_tables():
     """Create all tables once for the entire test session."""
     # Import models so they register with Base
-    from app.db.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa
+    from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa
     Base.metadata.create_all(bind=test_engine)
     yield
     Base.metadata.drop_all(bind=test_engine)
