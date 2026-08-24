@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 # Load environment variables from .env
 load_dotenv()
 
-# Import Base and DATABASE_URL from app.db.database
-from app.db.database import Base, DATABASE_URL
+# Import Base and DATABASE_URL from app.db
+from app.db import Base, DATABASE_URL
 
 # Import all models so Base.metadata contains all table definitions for --autogenerate
 from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa: F401

@@ -8,7 +8,7 @@ from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.database import Base
+from app.db import Base
 from app.utils.enums import ScoringMode, PagerStatus
 from app.utils.helpers import generate_uuid, utcnow
 

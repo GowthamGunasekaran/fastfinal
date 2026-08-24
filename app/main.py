@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # Load .env file if present
 load_dotenv()
 
-from app.db.database import engine, Base
+from app.db import engine, Base
 
 # Import all models so SQLAlchemy registers them before create_all
 from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa: F401
@@ -29,8 +29,8 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
 
         # Seed development data
-        from app.db.database import SessionLocal
-        from app.db.seed import run_seed
+        from app.db import SessionLocal
+        from app.seed import run_seed
         db = SessionLocal()
         try:
             run_seed(db)

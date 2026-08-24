@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException, 
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict
 
-from app.db.database import get_db
+from app.db import get_db
 from app.schemas.pager_schema import (
     PagerCreate,
     PagerUpdate,
