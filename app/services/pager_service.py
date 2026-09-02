@@ -52,7 +52,7 @@ class PagerService:
                 len(pillar_data.initiatives or []), pillar_data.pillar_number
             )
             for init_data in pillar_data.initiatives or []:
-                validate_image_urls(init_data.image_urls or [])
+                validate_image_urls(init_data.images or [])
 
         published_by = payload.published_by
         published_at = payload.published_at
@@ -118,7 +118,7 @@ class PagerService:
                     week_end=init_data.week_end,
                     guidelines=init_data.guidelines,
                     checklist_compliance_notes=init_data.checklist_compliance_notes,
-                    image_urls=init_data.image_urls or [],
+                    images=init_data.images or [],
                     created_at=utcnow(),
                     updated_at=utcnow(),
                 )
@@ -217,7 +217,7 @@ class PagerService:
                 len(pillar_data.initiatives or []), pillar_data.pillar_number or 0
             )
             for init_data in pillar_data.initiatives or []:
-                validate_image_urls(init_data.image_urls or [])
+                validate_image_urls(init_data.images or [])
 
             if pillar_data.pillar_id and pillar_data.pillar_id in existing_pillars:
                 # Update existing pillar
@@ -270,7 +270,7 @@ class PagerService:
                         week_end=init_data.week_end,
                         guidelines=init_data.guidelines,
                         checklist_compliance_notes=init_data.checklist_compliance_notes,
-                        image_urls=init_data.image_urls or [],
+                        images=init_data.images or [],
                         created_at=utcnow(),
                         updated_at=utcnow(),
                     )
@@ -300,7 +300,7 @@ class PagerService:
                     "initiative_number", "initiative_track", "priority_level",
                     "accountable_function_department", "initiative_description",
                     "kpi_metric", "success_target", "unit", "week_start", "week_end",
-                    "guidelines", "checklist_compliance_notes", "image_urls",
+                    "guidelines", "checklist_compliance_notes", "images",
                 ]
                 for f in fields:
                     val = getattr(init_data, f, None)
@@ -325,7 +325,7 @@ class PagerService:
                     week_end=init_data.week_end,
                     guidelines=init_data.guidelines,
                     checklist_compliance_notes=init_data.checklist_compliance_notes,
-                    image_urls=init_data.image_urls or [],
+                    images=init_data.images or [],
                     created_at=utcnow(),
                     updated_at=utcnow(),
                 )

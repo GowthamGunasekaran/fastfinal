@@ -22,13 +22,13 @@ class InitiativeCreate(BaseModel):
     week_end: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
-    image_urls: Optional[List[str]] = Field(default_factory=list)
+    images: Optional[List[str]] = Field(default_factory=list)
 
-    @field_validator("image_urls")
+    @field_validator("images")
     @classmethod
     def validate_image_count(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         if v and len(v) > 3:
-            raise ValueError("Maximum 3 image URLs allowed per initiative.")
+            raise ValueError("Maximum 3 images allowed per initiative.")
         return v
 
 
@@ -47,13 +47,13 @@ class InitiativeUpdate(BaseModel):
     week_end: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
-    image_urls: Optional[List[str]] = None
+    images: Optional[List[str]] = None
 
-    @field_validator("image_urls")
+    @field_validator("images")
     @classmethod
     def validate_image_count(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         if v and len(v) > 3:
-            raise ValueError("Maximum 3 image URLs allowed per initiative.")
+            raise ValueError("Maximum 3 images allowed per initiative.")
         return v
 
 
@@ -75,6 +75,6 @@ class InitiativeOut(BaseModel):
     week_end: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
-    image_urls: Optional[List[str]] = None
+    images: Optional[List[str]] = None
 
     model_config = {"from_attributes": True}

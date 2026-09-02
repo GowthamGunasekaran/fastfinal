@@ -64,7 +64,7 @@ def _full_pager():
                 "unit": "%",
                 "week_start": "2026-08-01",
                 "week_end": "2026-08-31",
-                "image_urls": [
+                "images": [
                     f"https://example.com/p{p_num}-i{i_num}-1.jpg",
                     f"https://example.com/p{p_num}-i{i_num}-2.jpg",
                     f"https://example.com/p{p_num}-i{i_num}-3.jpg",
@@ -168,7 +168,7 @@ def test_initiatives_accept_3_images(client):
     assert response.status_code == 200
     data = response.json()
     total_images = sum(
-        len(i["image_urls"] or [])
+        len(i["images"] or [])
         for p in data["pillars"]
         for i in p["initiatives"]
     )
@@ -230,7 +230,7 @@ def test_draft_with_1_pillar_1_initiative(client):
                     {
                         "initiative_number": 1,
                         "initiative_description": "Single initiative",
-                        "image_urls": ["https://example.com/img1.jpg"],
+                        "images": ["https://example.com/img1.jpg"],
                     }
                 ],
             }
@@ -318,8 +318,8 @@ def test_edit_pager_updates_initiative_description(client):
     assert updated["initiative_description"] == "UPDATED DESCRIPTION"
 
 
-def test_edit_pager_updates_image_urls(client):
-    """Test 9d: PATCH updates image URLs on an initiative."""
+def test_edit_pager_updates_images(client):
+    """Test 9d: PATCH updates images on an initiative."""
     payload = _full_pager()
     create_resp = client.post("/api/v1/pagers", json=payload)
     data = create_resp.json()
@@ -339,7 +339,7 @@ def test_edit_pager_updates_image_urls(client):
                         {
                             "initiative_id": first_initiative["initiative_id"],
                             "initiative_number": 1,
-                            "image_urls": new_urls,
+                            "images": new_urls,
                         }
                     ],
                 }
@@ -347,7 +347,7 @@ def test_edit_pager_updates_image_urls(client):
         },
     )
     assert patch_resp.status_code == 200
-    updated_urls = patch_resp.json()["pillars"][0]["initiatives"][0]["image_urls"]
+    updated_urls = patch_resp.json()["pillars"][0]["initiatives"][0]["images"]
     assert updated_urls == new_urls
 
 
@@ -729,10 +729,10 @@ def test_4_initiatives_per_pillar_rejected(client):
             "pillar_name": "Pillar One",
             "pillar_weight": 100,
             "initiatives": [
-                {"initiative_number": 1, "initiative_description": "I1", "image_urls": []},
-                {"initiative_number": 2, "initiative_description": "I2", "image_urls": []},
-                {"initiative_number": 3, "initiative_description": "I3", "image_urls": []},
-                {"initiative_number": 4, "initiative_description": "I4", "image_urls": []},
+                {"initiative_number": 1, "initiative_description": "I1", "images": []},
+                {"initiative_number": 2, "initiative_description": "I2", "images": []},
+                {"initiative_number": 3, "initiative_description": "I3", "images": []},
+                {"initiative_number": 4, "initiative_description": "I4", "images": []},
             ],
         }
     ]
@@ -742,11 +742,11 @@ def test_4_initiatives_per_pillar_rejected(client):
 
 
 # ---------------------------------------------------------------------------
-# Test 21: Four image URLs fail validation
+# Test 21: Four images fail validation
 # ---------------------------------------------------------------------------
 
-def test_4_image_urls_rejected(client):
-    """Test 21: More than 3 image URLs on an initiative should fail."""
+def test_4_images_rejected(client):
+    """Test 21: More than 3 images on an initiative should fail."""
     payload = _minimal_pager()
     payload["pillars"] = [
         {
@@ -757,7 +757,7 @@ def test_4_image_urls_rejected(client):
                 {
                     "initiative_number": 1,
                     "initiative_description": "Test",
-                    "image_urls": [
+                    "images": [
                         "https://example.com/1.jpg",
                         "https://example.com/2.jpg",
                         "https://example.com/3.jpg",

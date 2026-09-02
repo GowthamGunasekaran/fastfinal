@@ -7,13 +7,16 @@ MAX_INITIATIVES_PER_PILLAR = 3
 MAX_IMAGES_PER_INITIATIVE = 3
 
 
-def validate_image_urls(image_urls: List[str]) -> None:
-    """Validate image URL count."""
-    if image_urls and len(image_urls) > MAX_IMAGES_PER_INITIATIVE:
+def validate_image_urls(images: List[str]) -> None:
+    """Validate image count."""
+    if images and len(images) > MAX_IMAGES_PER_INITIATIVE:
         raise HTTPException(
             status_code=400,
-            detail=f"Maximum {MAX_IMAGES_PER_INITIATIVE} image URLs allowed per initiative.",
+            detail=f"Maximum {MAX_IMAGES_PER_INITIATIVE} images allowed per initiative.",
         )
+
+
+validate_images = validate_image_urls
 
 
 def validate_pillar_count(count: int) -> None:

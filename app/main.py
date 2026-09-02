@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan: create tables and seed data on startup (skip in test mode).
     """
-    if os.getenv("TESTING") != "1" and not os.getenv("DATABASE_URL", "").startswith("sqlite"):
+    if os.getenv("TESTING") != "1":
         # Create all tables
         Base.metadata.create_all(bind=engine)
 

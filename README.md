@@ -30,7 +30,7 @@ SQLite (dev) / PostgreSQL (prod)
 Pager (1)
   └── Pillars (max 5)
         └── Initiatives (max 3 per Pillar)
-              └── image_urls (max 3 per Initiative)
+              └── images (max 3 per Initiative)
 ```
 
 ---
@@ -209,7 +209,7 @@ Partial update. Provide only fields to change.
           "initiative_id": "<existing-initiative-uuid>",
           "initiative_number": 1,
           "initiative_description": "Updated description",
-          "image_urls": ["https://example.com/new.jpg"]
+          "images": ["https://example.com/new.jpg"]
         }
       ]
     }
@@ -386,7 +386,7 @@ GET /api/v1/metadata
 |---|---|---|
 | `pager` | `pager_id` (UUID string) | title, market, retailer, channel, category, campaign_focus, scoring_mode, status |
 | `pillar` | `pillar_id` (UUID string) | pager_id (FK), pillar_number, pillar_weight |
-| `pillar_initiative` | `pillar_initiative_id` (INTEGER auto-increment) | initiative_id (UUID), pillar_id (FK), image_urls (JSON) |
+| `pillar_initiative` | `pillar_initiative_id` (INTEGER auto-increment) | initiative_id (UUID), pillar_id (FK), images (JSON) |
 | `metadata` | `metadata_id` (INTEGER auto-increment) | market (unique), retailer (JSON array), channel (JSON array), category (JSON array) |
 | `campaign` | `campaign_id` (UUID string) | market, campaign_name, created_by, created_at |
 
@@ -463,7 +463,7 @@ sample_payload.json
 
 1. **`pillar_initiative_id` is an INTEGER** — auto-increment PK. `initiative_id` is a UUID string and is the business identifier.
 2. **`retailer` is used** (not `retailer`) across all APIs, models, and schemas.
-3. **image_urls stored as JSON** on the initiative row — no separate image table.
+3. **images stored as JSON** on the initiative row — no separate image table.
 4. **Soft deletes** — status changes only, records are never physically deleted via API.
 5. **One transaction per Pager** — create/update uses a single `db.commit()` after all operations succeed.
 6. **N+1 prevention** — `selectinload` used for all Pager → Pillar → Initiative queries.

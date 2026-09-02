@@ -9,8 +9,12 @@ Supports two configuration modes:
 import os
 import logging
 from typing import Generator
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
+# Load .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

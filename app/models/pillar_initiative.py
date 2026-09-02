@@ -1,7 +1,7 @@
 """
 SQLAlchemy ORM model for the `pillar_initiative` table.
 
-image_urls is stored as JSON (list of strings) directly on this table.
+images is stored as JSON (list of strings) directly on this table.
 No separate image table is used.
 """
 
@@ -58,7 +58,7 @@ class PillarInitiative(Base):
     )
 
     # JSON column — list of image URL strings (max 3)
-    image_urls: Mapped[Optional[List[str]]] = mapped_column(
+    images: Mapped[Optional[List[str]]] = mapped_column(
         JSON, nullable=True, default=list
     )
 

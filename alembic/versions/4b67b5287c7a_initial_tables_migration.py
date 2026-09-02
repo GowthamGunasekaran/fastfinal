@@ -95,7 +95,7 @@ def upgrade() -> None:
     sa.Column('week_end', sa.String(length=20), nullable=True),
     sa.Column('guidelines', sa.String(length=2000), nullable=True),
     sa.Column('checklist_compliance_notes', sa.String(length=2000), nullable=True),
-    sa.Column('image_urls', sa.JSON(), nullable=True),
+    sa.Column('images', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['pager_id'], ['pager.pager_id'], ondelete='CASCADE'),
