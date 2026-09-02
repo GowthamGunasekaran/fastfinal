@@ -2,10 +2,14 @@
 Schema for Image Upload endpoint.
 """
 
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
 
 
-class ImageUploadResponse(BaseModel):
-    urls: List[str] = Field(default_factory=list, description="Array of public URLs of uploaded images")
-    url: Optional[str] = Field(None, description="Primary public URL of the uploaded image (for backwards compatibility)")
+class ImageUploadItem(BaseModel):
+    image_url: str = Field(..., description="public url to store the image path in db")
+    image_signed_url: str = Field(..., description="signed url to display the image in ui")
+
+
+# Alias for list response
+ImageUploadResponse = List[ImageUploadItem]

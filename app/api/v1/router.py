@@ -24,7 +24,7 @@ from app.schemas.metadata_schema import (
 )
 from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
 from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
-from app.schemas.storage_schema import ImageUploadResponse
+from app.schemas.storage_schema import ImageUploadItem, ImageUploadResponse
 from app.services.pager_service import pager_service
 from app.services.metadata_service import metadata_service
 from app.services.track_service import track_service
@@ -287,9 +287,9 @@ def list_campaigns(
 
 @router.post(
     "/upload",
-    response_model=ImageUploadResponse,
+    response_model=List[ImageUploadItem],
     status_code=status.HTTP_201_CREATED,
-    summary="Upload image(s) to GCP Cloud Storage and get public URLs (up to 3 files)",
+    summary="Upload image(s) to GCP Cloud Storage and get public and signed URLs (up to 3 files)",
     tags=["Upload"],
 )
 async def upload_images(

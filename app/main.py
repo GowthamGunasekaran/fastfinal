@@ -17,6 +17,7 @@ from app.db import engine, Base
 # Import all models so SQLAlchemy registers them before create_all
 from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # noqa: F401
 
+# API router
 from app.api.v1.router import router
 
 @asynccontextmanager
@@ -76,4 +77,5 @@ app.include_router(router)
 
 @app.get("/health", tags=["Health"])
 def health_check():
+    """Service health check endpoint."""
     return {"status": "ok", "service": "National One-Pager API"}

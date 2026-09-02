@@ -1239,17 +1239,18 @@ def test_update_track_only_requested_column_changes(client):
 # ===========================================================================
 
 def test_upload_image_success(client):
-    """Test uploading a single image file successfully and receiving a signed URL and urls list."""
+    """Test uploading a single image file successfully and receiving an array of objects with image_url and image_signed_url."""
     fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
     files = {"file": ("test_logo.png", fake_png, "image/png")}
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 201
     body = resp.json()
-    assert "url" in body
-    assert "urls" in body
-    assert len(body["urls"]) == 1
-    assert body["url"].startswith("http")
-    assert body["urls"][0] == body["url"]
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert "image_url" in body[0]
+    assert "image_signed_url" in body[0]
+    assert body[0]["image_url"].startswith("http")
+    assert isinstance(body[0]["image_signed_url"], str)
 
 
 def test_upload_multiple_images_success(client):
@@ -1263,9 +1264,13 @@ def test_upload_multiple_images_success(client):
     resp = client.post("/api/v1/upload", files=files)
     assert resp.status_code == 201
     body = resp.json()
-    assert "urls" in body
-    assert len(body["urls"]) == 3
-    assert body["url"] == body["urls"][0]
+    assert isinstance(body, list)
+    assert len(body) == 3
+    for item in body:
+        assert "image_url" in item
+        assert "image_signed_url" in item
+        assert item["image_url"].startswith("http")
+        assert isinstance(item["image_signed_url"], str)
 
 
 def test_upload_more_than_3_images_rejected(client):
@@ -1475,6 +1480,100 @@ def test_update_pager_with_published_fields(client):
     data = resp.json()
     assert data["published_by"] == "publisher-bob"
     assert "2026-08-23" in data["published_at"]
+
+
+def test_pager_response_includes_image_signed_url(client):
+    """Test that GET /api/v1/pagers and GET /api/v1/pagers/{id} include image_signed_url at both pager and initiative levels."""
+    payload = _minimal_pager()
+    payload["image_url"] = "https://storage.googleapis.com/test-bucket/images/banner.png"
+    payload["pillars"] = [
+        {
+            "pillar_number": 1,
+            "pillar_name": "Execution",
+            "initiatives": [
+                {
+                    "initiative_number": 1,
+                    "initiative_description": "First Initiative",
+                    "images": [
+                        "https://storage.googleapis.com/test-bucket/images/init1.png",
+                        "https://storage.googleapis.com/test-bucket/images/init2.png",
+                    ],
+                }
+            ],
+        }
+    ]
+    create_resp = client.post("/api/v1/pagers", json=payload)
+    assert create_resp.status_code == 200
+    data = create_resp.json()
+    pager_id = data["pager_id"]
+    assert "image_url" in data
+    assert "image_signed_url" in data
+    assert data["image_url"] == "https://storage.googleapis.com/test-bucket/images/banner.png"
+    assert isinstance(data["image_signed_url"], str)
+
+    # Verify initiative level image_signed_url (returns list, empty list if signing is inactive)
+    init_data = data["pillars"][0]["initiatives"][0]
+    assert "images" in init_data
+    assert "image_signed_url" in init_data
+    assert isinstance(init_data["image_signed_url"], list)
+
+    # Test GET /api/v1/pagers?skip=0&limit=100
+    list_resp = client.get("/api/v1/pagers?skip=0&limit=100")
+    assert list_resp.status_code == 200
+    pagers = list_resp.json()
+    matched = [p for p in pagers if p["pager_id"] == pager_id]
+    assert len(matched) == 1
+    assert "image_url" in matched[0]
+    assert "image_signed_url" in matched[0]
+    assert matched[0]["image_url"] == "https://storage.googleapis.com/test-bucket/images/banner.png"
+    assert isinstance(matched[0]["image_signed_url"], str)
+
+    # Test GET /api/v1/pagers/{pager_id}
+    get_resp = client.get(f"/api/v1/pagers/{pager_id}")
+    assert get_resp.status_code == 200
+    pager_detail = get_resp.json()
+    assert pager_detail["image_url"] == "https://storage.googleapis.com/test-bucket/images/banner.png"
+    assert "image_signed_url" in pager_detail
+    assert isinstance(pager_detail["image_signed_url"], str)
+
+    # Verify initiative level image_signed_url on GET /api/v1/pagers/{id}
+    get_init = pager_detail["pillars"][0]["initiatives"][0]
+    assert "images" in get_init
+    assert "image_signed_url" in get_init
+    assert isinstance(get_init["image_signed_url"], list)
+
+
+def test_common_get_signed_url_function(monkeypatch):
+    """Test common get_signed_url_from_public_url: returns generated URL when active, empty string when not (no dummy URLs)."""
+    from app.services.storage_service import storage_service, get_signed_url_from_public_url
+
+    # None and empty inputs return empty string
+    assert get_signed_url_from_public_url(None) == ""
+    assert get_signed_url_from_public_url("") == ""
+    assert get_signed_url_from_public_url("   ") == ""
+
+    # When GCS client is not active/available: returns empty string (NOT dummy fallback)
+    url = "https://storage.googleapis.com/my-bucket/images/sample.jpg"
+    res = get_signed_url_from_public_url(url)
+    assert res == ""
+
+    # When GCS signing IS active and working: returns the generated signed URL
+    class MockBlob:
+        def generate_signed_url(self, **kwargs):
+            return "https://storage.googleapis.com/my-bucket/images/sample.jpg?X-Goog-Signature=valid123"
+
+    class MockBucket:
+        def blob(self, name):
+            return MockBlob()
+
+    class MockClient:
+        def bucket(self, name):
+            return MockBucket()
+
+    monkeypatch.setattr(storage_service, "_get_client", lambda: MockClient())
+    signed = get_signed_url_from_public_url(url)
+    assert signed == "https://storage.googleapis.com/my-bucket/images/sample.jpg?X-Goog-Signature=valid123"
+
 
 
 

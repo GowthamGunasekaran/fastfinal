@@ -76,5 +76,6 @@ class InitiativeOut(BaseModel):
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
     images: Optional[List[str]] = None
+    image_signed_url: List[str] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}

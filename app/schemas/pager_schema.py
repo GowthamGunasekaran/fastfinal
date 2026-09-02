@@ -73,6 +73,7 @@ class PagerOut(BaseModel):
     track: Optional[str] = None
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
+    image_signed_url: Optional[str] = ""
     created_by: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_by: Optional[str] = None
@@ -99,6 +100,7 @@ class PagerSummary(BaseModel):
     track: Optional[str] = None
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
+    image_signed_url: Optional[str] = ""
     created_by: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_by: Optional[str] = None

@@ -71,3 +71,17 @@ class PillarInitiative(Base):
 
     # Relationships
     pillar: Mapped["Pillar"] = relationship("Pillar", back_populates="initiatives")
+
+    @property
+    def image_signed_url(self) -> List[str]:
+        """List of signed URLs generated from public image URLs, or empty array if not available."""
+        if not self.images:
+            return []
+        from app.services.storage_service import storage_service
+        urls = [
+            storage_service.get_signed_url_from_public_url(img)
+            for img in self.images
+            if img
+        ]
+        return [u for u in urls if u]
+
