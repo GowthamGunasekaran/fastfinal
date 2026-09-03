@@ -56,8 +56,21 @@ class StorageService:
             return self._client
 
         gac_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip().strip('"').strip("'")
-        if gac_path and not os.path.isabs(gac_path):
-            gac_path = os.path.abspath(gac_path)
+        if gac_path:
+            if not os.path.isabs(gac_path):
+                candidates = [
+                    os.path.abspath(gac_path),
+                    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), gac_path),
+                ]
+                for cand in candidates:
+                    if os.path.isfile(cand):
+                        gac_path = cand
+                        break
+                else:
+                    gac_path = os.path.abspath(gac_path)
+
+            if not os.path.isfile(gac_path):
+                logger.warning(f"GOOGLE_APPLICATION_CREDENTIALS file does not exist: {gac_path}")
 
         project = self._get_configured_project()
 
@@ -88,18 +101,23 @@ class StorageService:
     def _get_signing_credentials(self) -> Tuple[Optional[str], Optional[str]]:
         """
         Retrieves (service_account_email, access_token) for IAM SignBlob URL signing
-        when running in environments without a local private key (e.g. Cloud Run / GCE).
+        when running in environments without a local private key (e.g. Cloud Run / GCE / local ADC).
         """
         client = self._get_client()
         credentials = getattr(client, "_credentials", None) if client else None
 
-        sa_email = None
+        sa_email = (
+            os.getenv("GCS_SERVICE_ACCOUNT_EMAIL", "").strip()
+            or os.getenv("SERVICE_ACCOUNT_EMAIL", "").strip()
+            or None
+        )
         access_token = None
 
         if credentials is not None:
-            sa_email = getattr(credentials, "service_account_email", "") or getattr(
-                credentials, "signer_email", ""
-            )
+            if not sa_email:
+                sa_email = getattr(credentials, "service_account_email", "") or getattr(
+                    credentials, "signer_email", ""
+                )
             try:
                 from google.auth.transport.requests import Request
 
@@ -181,7 +199,8 @@ class StorageService:
                 )
             except Exception as e:
                 logger.warning(
-                    f"Failed to generate signed URL via IAM SignBlob for {getattr(blob, 'name', '')}: {e}"
+                    f"Failed to generate signed URL via IAM SignBlob for {getattr(blob, 'name', '')}: {e}. "
+                    f"Ensure {sa_email} has the 'roles/iam.serviceAccountTokenCreator' role on itself and the IAM Credentials API is enabled."
                 )
 
         # 3. Direct v4 fallback (handles mocked blob / clients in tests)
@@ -193,7 +212,11 @@ class StorageService:
                     method="GET",
                 )
             except Exception as e:
-                logger.debug(f"Direct v4 signing fallback failed for {getattr(blob, 'name', '')}: {e}")
+                logger.warning(
+                    f"Signed URL generation failed for blob {getattr(blob, 'name', '')}: {e}. "
+                    "Note: Generating a signed URL requires a Service Account JSON key (GOOGLE_APPLICATION_CREDENTIALS), "
+                    "or IAM SignBlob permissions ('roles/iam.serviceAccountTokenCreator') on Cloud Run."
+                )
 
         return ""
 
@@ -268,6 +291,17 @@ class StorageService:
                             status_code=status.HTTP_502_BAD_GATEWAY,
                             detail=f"Cloud Storage upload failed for file {file.filename}: {error_msg}",
                         )
+            else:
+                if not bucket_name:
+                    logger.warning(
+                        f"GCS_BUCKET_NAME is not configured or is a placeholder ('{os.getenv('GCS_BUCKET_NAME', '')}') in .env. "
+                        "Cloud upload and signed URL generation were skipped."
+                    )
+                elif not client:
+                    logger.warning(
+                        "GCS client is not authenticated (GOOGLE_APPLICATION_CREDENTIALS or ADC missing). "
+                        "Cloud upload and signed URL generation were skipped."
+                    )
 
             public_url = self._generate_public_url(blob_name, effective_bucket)
             items.append(

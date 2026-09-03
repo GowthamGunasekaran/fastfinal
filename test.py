@@ -34,10 +34,23 @@ def upload_image_to_gcp(file: UploadFile = File(...)):
         # Construct the GCP URL
         gcp_url = f"https://storage.googleapis.com/{GCP_BUCKET_ID}/{blob_name}"
 
+        # Generate signed URL (valid for 24 hours)
+        from datetime import timedelta
+        signed_url = ""
+        try:
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(hours=24),
+                method="GET",
+            )
+        except Exception:
+            signed_url = ""
+
         return {
             "status": "success",
             "filename": blob_name,
-            "url": gcp_url
+            "url": gcp_url,
+            "signed_url": signed_url,
         }
 
     except Exception as e:
