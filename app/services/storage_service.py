@@ -1,57 +1,201 @@
 """
 Google Cloud Storage (GCS) Service.
 
-Uploads image files to a GCP Storage bucket and returns public URLs.
-Designed for Cloud Run deployment using native Application Default Credentials (ADC).
+Uploads image files to a GCP Storage bucket and returns public & signed URLs.
 Supports single or multiple file uploads (array of files, up to 3 files).
+Authentication is loaded automatically from GOOGLE_APPLICATION_CREDENTIALS or native GCP ADC.
 """
 
 import os
 import uuid
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile, status
 
 from app.schemas.storage_schema import ImageUploadItem, ImageUploadResponse
 
+load_dotenv()
+
 logger = logging.getLogger(__name__)
+
+PLACEHOLDER_BUCKETS = {"your-gcs-bucket-name", "your-bucket-name", ""}
+PLACEHOLDER_PROJECTS = {"your-gcp-project-id", "your-project-id", ""}
 
 
 class StorageService:
     def __init__(self):
-        self.project_id = os.getenv("GCP_PROJECT_ID", "").strip()
-        self.bucket_name = os.getenv("GCS_BUCKET_NAME", "").strip()
-        self.timeout_seconds = int(os.getenv("GCS_TIMEOUT_SECONDS", "30"))
         self._client = None
+        self.timeout_seconds = int(os.getenv("GCS_TIMEOUT_SECONDS", "30"))
+
+    def _get_configured_bucket(self) -> Optional[str]:
+        """Returns the configured GCS bucket name, ignoring placeholder values."""
+        bucket = os.getenv("GCS_BUCKET_NAME", "").strip()
+        if not bucket or bucket in PLACEHOLDER_BUCKETS:
+            return None
+        return bucket
+
+    def _get_configured_project(self) -> Optional[str]:
+        """Returns the configured GCP project ID, ignoring placeholder values."""
+        project = os.getenv("GCP_PROJECT_ID", "").strip()
+        if not project or project in PLACEHOLDER_PROJECTS:
+            return None
+        return project
 
     def _get_client(self):
         """
-        Lazily initialize Google Cloud Storage client using Application Default Credentials (ADC),
-        which automatically binds to the Cloud Run service identity without needing JSON key files.
+        Lazily initialize Google Cloud Storage client.
+
+        Supports:
+        1. GOOGLE_APPLICATION_CREDENTIALS: If set and file exists, explicitly loads credentials
+           (extracts service account private key, email, and project ID).
+        2. Native Application Default Credentials (ADC): Cloud Run, Compute Engine, GKE, etc.
         """
         if self._client is not None:
             return self._client
 
-        project = os.getenv("GCP_PROJECT_ID", self.project_id).strip()
-        bucket = os.getenv("GCS_BUCKET_NAME", self.bucket_name).strip()
+        gac_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip().strip('"').strip("'")
+        if gac_path and not os.path.isabs(gac_path):
+            gac_path = os.path.abspath(gac_path)
 
-        if not bucket or bucket == "your-gcs-bucket-name":
-            return None
+        project = self._get_configured_project()
 
         try:
             from google.cloud import storage
 
+            # 1. If GOOGLE_APPLICATION_CREDENTIALS points to an existing file, load explicitly
+            if gac_path and os.path.isfile(gac_path):
+                import google.auth
+                credentials, file_project_id = google.auth.load_credentials_from_file(gac_path)
+                effective_project = project or file_project_id or getattr(credentials, "project_id", None)
+                self._client = storage.Client(credentials=credentials, project=effective_project)
+                logger.info(f"GCS client initialized using GOOGLE_APPLICATION_CREDENTIALS: {gac_path}")
+                return self._client
+
+            # 2. Native Application Default Credentials (ADC) for Cloud Run / GCE
             kwargs = {}
-            if project and project != "your-gcp-project-id":
+            if project:
                 kwargs["project"] = project
 
-            # Initializes using ADC (Application Default Credentials)
             self._client = storage.Client(**kwargs)
+            logger.info("GCS client initialized using native Application Default Credentials (ADC)")
             return self._client
         except Exception as e:
             logger.warning(f"GCS Client initialization failed: {e}")
             return None
+
+    def _get_signing_credentials(self) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Retrieves (service_account_email, access_token) for IAM SignBlob URL signing
+        when running in environments without a local private key (e.g. Cloud Run / GCE).
+        """
+        client = self._get_client()
+        credentials = getattr(client, "_credentials", None) if client else None
+
+        sa_email = None
+        access_token = None
+
+        if credentials is not None:
+            sa_email = getattr(credentials, "service_account_email", "") or getattr(
+                credentials, "signer_email", ""
+            )
+            try:
+                from google.auth.transport.requests import Request
+
+                # Check if token is present and valid; refresh if needed
+                is_valid = getattr(credentials, "valid", False)
+                token = getattr(credentials, "token", None)
+                if not is_valid or not token:
+                    req = Request()
+                    credentials.refresh(req)
+
+                access_token = getattr(credentials, "token", None)
+            except Exception as e:
+                logger.debug(f"Could not refresh credentials for signing: {e}")
+
+        # In GCP environments (Cloud Run / GCE), if service_account_email is 'default' or missing,
+        # query the metadata server directly.
+        if not sa_email or sa_email == "default" or not access_token:
+            try:
+                from google.auth.compute_engine import _metadata
+                from google.auth.transport.requests import Request
+
+                req = Request()
+                if not sa_email or sa_email == "default":
+                    info = _metadata.get_service_account_info(req, service_account="default")
+                    if info and "email" in info:
+                        sa_email = info["email"]
+                if not access_token:
+                    tok, _ = _metadata.get_service_account_token(req, service_account="default")
+                    access_token = tok
+            except Exception as e:
+                logger.debug(f"Could not retrieve service account info from metadata server: {e}")
+
+        clean_email = sa_email if sa_email and sa_email != "default" else None
+        return (clean_email, access_token)
+
+    def _sign_blob(self, blob, expiration: timedelta = timedelta(hours=24)) -> str:
+        """
+        Generates a v4 signed URL for a GCS blob.
+        Supports:
+        1. Local credentials with private key (e.g. Service Account JSON from GOOGLE_APPLICATION_CREDENTIALS).
+        2. GCP Managed Environments without local private keys (Cloud Run / GCE) via IAM SignBlob.
+        3. Direct v4 fallback (handles mocked blob / clients in tests).
+        """
+        if blob is None:
+            return ""
+
+        client = self._get_client()
+        credentials = getattr(client, "_credentials", None) if client else None
+
+        # 1. If credentials can sign locally with a private key (Service Account JSON)
+        can_sign_locally = (
+            credentials is not None
+            and (
+                (hasattr(credentials, "signer") and credentials.signer is not None)
+                or (hasattr(credentials, "sign_bytes") and callable(getattr(credentials, "sign_bytes", None)))
+            )
+        )
+
+        if can_sign_locally:
+            try:
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET",
+                )
+            except Exception as e:
+                logger.warning(f"Local v4 signing failed for blob {getattr(blob, 'name', '')}: {e}")
+
+        # 2. Managed GCP / ADC environment without local private key: IAM SignBlob via service_account_email + access_token
+        sa_email, access_token = self._get_signing_credentials()
+        if sa_email and access_token:
+            try:
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET",
+                    service_account_email=sa_email,
+                    access_token=access_token,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to generate signed URL via IAM SignBlob for {getattr(blob, 'name', '')}: {e}"
+                )
+
+        # 3. Direct v4 fallback (handles mocked blob / clients in tests)
+        if not can_sign_locally:
+            try:
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET",
+                )
+            except Exception as e:
+                logger.debug(f"Direct v4 signing fallback failed for {getattr(blob, 'name', '')}: {e}")
+
+        return ""
 
     def _generate_public_url(self, blob_name: str, bucket_name: str) -> str:
         """Generate standard public GCS URL for uploaded object."""
@@ -74,8 +218,18 @@ class StorageService:
             )
 
         items: List[ImageUploadItem] = []
-        bucket_name = os.getenv("GCS_BUCKET_NAME", self.bucket_name).strip() or "national-one-pager-storage"
+        bucket_name = self._get_configured_bucket()
         client = self._get_client()
+
+        # In production, require GCS client and bucket to be properly configured
+        if os.getenv("APP_ENV") == "production" and (not client or not bucket_name):
+            logger.error("GCS configuration missing in production: bucket_name or client is not initialized.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Cloud Storage is not configured properly.",
+            )
+
+        effective_bucket = bucket_name or "storage"
 
         for index, file in enumerate(files):
             content_type = file.content_type or "image/png"
@@ -95,8 +249,8 @@ class StorageService:
             ext = os.path.splitext(file.filename or "image.png")[1] or ".png"
             blob_name = f"images/{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{index + 1}{ext}"
 
-            signed_url = None
-            if client and bucket_name and bucket_name != "your-gcs-bucket-name":
+            signed_url = ""
+            if client and bucket_name:
                 try:
                     bucket = client.bucket(bucket_name)
                     target_blob = bucket.blob(blob_name)
@@ -105,21 +259,7 @@ class StorageService:
                         content_type=content_type,
                         timeout=self.timeout_seconds,
                     )
-                    try:
-                        signed_url = target_blob.generate_signed_url(
-                            version="v4",
-                            expiration=timedelta(hours=24),
-                            method="GET",
-                        )
-                    except Exception as sign_err:
-                        logger.warning(f"Failed to generate v4 signed URL: {sign_err}")
-                        try:
-                            signed_url = target_blob.generate_signed_url(
-                                expiration=timedelta(hours=24),
-                                method="GET",
-                            )
-                        except Exception:
-                            signed_url = None
+                    signed_url = self._sign_blob(target_blob, expiration=timedelta(hours=24))
                 except Exception as e:
                     error_msg = str(e)
                     logger.error(f"GCS upload failed for file {file.filename}: {error_msg}")
@@ -129,7 +269,7 @@ class StorageService:
                             detail=f"Cloud Storage upload failed for file {file.filename}: {error_msg}",
                         )
 
-            public_url = self._generate_public_url(blob_name, bucket_name)
+            public_url = self._generate_public_url(blob_name, effective_bucket)
             items.append(
                 ImageUploadItem(
                     image_url=public_url,
@@ -166,10 +306,7 @@ class StorageService:
             parsed = urlparse(url_str)
             path = unquote(parsed.path.lstrip("/"))
 
-            bucket_name = (
-                os.getenv("GCS_BUCKET_NAME", self.bucket_name).strip()
-                or "national-one-pager-storage"
-            )
+            bucket_name = self._get_configured_bucket()
             blob_name = None
 
             if "storage.googleapis.com" in parsed.netloc:
@@ -188,31 +325,17 @@ class StorageService:
             else:
                 blob_name = path
 
-            if not blob_name:
+            if not blob_name or not bucket_name:
                 return ""
 
             client = self._get_client()
-            if client and bucket_name and bucket_name != "your-gcs-bucket-name":
+            if client and bucket_name:
                 try:
                     bucket = client.bucket(bucket_name)
                     blob = bucket.blob(blob_name)
-                    try:
-                        return blob.generate_signed_url(
-                            version="v4",
-                            expiration=timedelta(hours=expiration_hours),
-                            method="GET",
-                        )
-                    except Exception as sign_err:
-                        logger.warning(
-                            f"Failed to generate v4 signed URL for {blob_name}: {sign_err}"
-                        )
-                        try:
-                            return blob.generate_signed_url(
-                                expiration=timedelta(hours=expiration_hours),
-                                method="GET",
-                            )
-                        except Exception:
-                            return ""
+                    return self._sign_blob(
+                        blob, expiration=timedelta(hours=expiration_hours)
+                    )
                 except Exception as e:
                     logger.warning(
                         f"Failed to access bucket {bucket_name} for signed URL: {e}"

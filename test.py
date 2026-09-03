@@ -8,8 +8,8 @@ from google.cloud import storage
 app = FastAPI()
 
 # Replace with your actual GCP Project ID and Bucket ID (or pass via Environment Variables)
-GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-gcp-project-id")
-GCP_BUCKET_ID = os.getenv("GCP_BUCKET_ID", "your-gcp-bucket-id")
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
+GCP_BUCKET_ID = os.getenv("GCS_BUCKET_NAME", os.getenv("GCP_BUCKET_ID", ""))
 
 
 @app.post("/upload")
