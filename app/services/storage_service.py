@@ -25,10 +25,15 @@ class StorageService:
         self._client = None
         self.bucket_name = os.getenv("GCS_BUCKET_NAME", "").strip()
         self.project_id = os.getenv("GCP_PROJECT_ID", "").strip() or None
+        self.service_account_email = (
+            os.getenv("GCS_SERVICE_ACCOUNT_EMAIL", "").strip()
+            or os.getenv("SERVICE_ACCOUNT_EMAIL", "").strip()
+            or None
+        )
         self.timeout_seconds = int(os.getenv("GCS_TIMEOUT_SECONDS", "30"))
 
     def _get_client(self):
-        """Initializes and returns the Google Cloud Storage client."""
+        """Initializes and returns the Google Cloud Storage client using GCP environment credentials."""
         if self._client is not None:
             return self._client
         try:
@@ -54,27 +59,42 @@ class StorageService:
             logger.error(f"Failed to access GCS bucket '{self.bucket_name}': {e}")
             return None
 
+    def _get_service_account_email(self) -> Optional[str]:
+        """
+        Returns the GCP Service Account email address (...iam.gserviceaccount.com).
+        Uses GCS_SERVICE_ACCOUNT_EMAIL env if set, or resolves from GCP metadata/credentials.
+        """
+        if self.service_account_email:
+            return self.service_account_email
+
+        client = self._get_client()
+        creds = getattr(client, "_credentials", None) if client else None
+        email = getattr(creds, "service_account_email", "") if creds else ""
+
+        if not email or email == "default":
+            try:
+                from google.auth.compute_engine import _metadata
+                from google.auth.transport.requests import Request
+
+                info = _metadata.get_service_account_info(Request(), service_account="default")
+                if info and "email" in info:
+                    email = info["email"]
+            except Exception:
+                pass
+
+        return email if email and email != "default" else None
+
     def _generate_signed_url(self, blob, expiration_hours: int = 24) -> str:
         """
-        Generates a v4 signed URL for an uploaded GCS blob.
-        Supports both credentials with private key and GCP Cloud Run / GCE IAM signing.
+        Generates a v4 signed URL using the GCP Service Account email
+        and IAM access token for production environments.
         """
         if blob is None:
             return ""
 
         expiration = timedelta(hours=expiration_hours)
+        sa_email = self._get_service_account_email()
 
-        # 1. Direct v4 signing (standard when credentials have signing capability or key)
-        try:
-            return blob.generate_signed_url(
-                version="v4",
-                expiration=expiration,
-                method="GET",
-            )
-        except Exception as direct_err:
-            logger.debug(f"Direct v4 signing failed: {direct_err}. Attempting IAM signing...")
-
-        # 2. GCP Managed Environment (Cloud Run / GCE) using service account token from metadata
         try:
             client = self._get_client()
             creds = getattr(client, "_credentials", None)
@@ -85,17 +105,7 @@ class StorageService:
                     creds.refresh(Request())
 
                 access_token = getattr(creds, "token", None)
-                sa_email = getattr(creds, "service_account_email", None)
-
-                if not sa_email or sa_email == "default":
-                    from google.auth.compute_engine import _metadata
-                    from google.auth.transport.requests import Request
-
-                    info = _metadata.get_service_account_info(Request(), service_account="default")
-                    if info and "email" in info:
-                        sa_email = info["email"]
-
-                if sa_email and sa_email != "default" and access_token:
+                if sa_email and access_token:
                     return blob.generate_signed_url(
                         version="v4",
                         expiration=expiration,
@@ -103,10 +113,21 @@ class StorageService:
                         service_account_email=sa_email,
                         access_token=access_token,
                     )
-        except Exception as iam_err:
-            logger.warning(f"IAM signed URL generation failed: {iam_err}")
+        except Exception as e:
+            logger.error(
+                f"Failed to generate signed URL with service account {sa_email}: {e}. "
+                "Ensure the service account has 'roles/iam.serviceAccountTokenCreator' role on itself."
+            )
 
-        return ""
+        # Fallback for unit testing with mocked blob
+        try:
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=expiration,
+                method="GET",
+            )
+        except Exception:
+            return ""
 
     async def upload_images(self, files: List[UploadFile]) -> List[ImageUploadItem]:
         """

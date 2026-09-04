@@ -15,48 +15,25 @@ GCP_BUCKET_ID = os.getenv("GCS_BUCKET_NAME", os.getenv("GCP_BUCKET_ID", ""))
 
 def _generate_signed_url(blob, client, expiration_hours: int = 24) -> str:
     """
-    Generates a v4 signed URL for a blob.
-    Handles:
-    1. Service Account JSON key (local signing with private key).
-    2. Google Cloud Run / Compute Engine ADC (IAM SignBlob API).
+    Generates a v4 signed URL for a blob using Service Account IAM SignBlob.
     """
+    if blob is None:
+        return ""
+
     expiration = timedelta(hours=expiration_hours)
-    credentials = getattr(client, "_credentials", None)
-
-    # 1. Local signing if private key is available (Service Account JSON)
-    can_sign_locally = (
-        credentials is not None
-        and (
-            (hasattr(credentials, "signer") and credentials.signer is not None)
-            or (hasattr(credentials, "sign_bytes") and callable(getattr(credentials, "sign_bytes", None)))
-        )
-    )
-    if can_sign_locally:
-        try:
-            return blob.generate_signed_url(
-                version="v4",
-                expiration=expiration,
-                method="GET",
-            )
-        except Exception as e:
-            print(f"Local signing failed: {e}")
-
-    # 2. Cloud Run / Compute Engine (google.auth.compute_engine.credentials.Credentials) via IAM SignBlob
     try:
         from google.auth.transport.requests import Request
         import google.auth
 
-        auth_creds = credentials
+        auth_creds = getattr(client, "_credentials", None)
         if auth_creds is None:
             auth_creds, _ = google.auth.default()
 
-        # Ensure access token is fetched / refreshed
         if not getattr(auth_creds, "valid", False) or not getattr(auth_creds, "token", None):
             auth_creds.refresh(Request())
 
         access_token = getattr(auth_creds, "token", None)
 
-        # Determine Service Account email
         sa_email = (
             os.getenv("GCS_SERVICE_ACCOUNT_EMAIL", "").strip()
             or os.getenv("SERVICE_ACCOUNT_EMAIL", "").strip()
@@ -64,7 +41,6 @@ def _generate_signed_url(blob, client, expiration_hours: int = 24) -> str:
             or getattr(auth_creds, "signer_email", "")
         )
 
-        # On Compute Engine / Cloud Run, service_account_email is 'default', query metadata server
         if not sa_email or sa_email == "default":
             try:
                 from google.auth.compute_engine import _metadata
@@ -86,15 +62,14 @@ def _generate_signed_url(blob, client, expiration_hours: int = 24) -> str:
     except Exception as iam_err:
         print(f"IAM SignBlob URL generation failed: {iam_err}")
 
-    # 3. Direct fallback
+    # Fallback
     try:
         return blob.generate_signed_url(
             version="v4",
             expiration=expiration,
             method="GET",
         )
-    except Exception as fallback_err:
-        print(f"Direct signing fallback failed: {fallback_err}")
+    except Exception:
         return ""
 
 
