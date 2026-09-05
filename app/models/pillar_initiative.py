@@ -57,7 +57,7 @@ class PillarInitiative(Base):
         String(2000), nullable=True
     )
 
-    # JSON column — list of image URL strings (max 3)
+    # JSON column — list of image names (max 3)
     images: Mapped[Optional[List[str]]] = mapped_column(
         JSON, nullable=True, default=list
     )
@@ -74,12 +74,12 @@ class PillarInitiative(Base):
 
     @property
     def image_signed_url(self) -> List[str]:
-        """List of signed URLs generated from public image URLs, or empty array if not available."""
+        """List of signed URLs generated from stored image names, or empty array if not available."""
         if not self.images:
             return []
         from app.services.storage_service import storage_service
         urls = [
-            storage_service.get_signed_url_from_public_url(img)
+            storage_service.get_signed_url(img)
             for img in self.images
             if img
         ]

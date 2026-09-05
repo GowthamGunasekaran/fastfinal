@@ -75,9 +75,9 @@ class Pager(Base):
 
     @property
     def image_signed_url(self) -> str:
-        """Dynamic signed URL generated from public image_url, or empty string if not available."""
+        """Dynamic signed URL generated from stored image name or URL, or empty string if not available."""
         if not self.image_url:
             return ""
         from app.services.storage_service import storage_service
-        return storage_service.get_signed_url_from_public_url(self.image_url) or ""
+        return storage_service.get_signed_url(self.image_url) or ""
 

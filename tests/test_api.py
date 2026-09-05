@@ -1247,9 +1247,9 @@ def test_upload_image_success(client):
     body = resp.json()
     assert isinstance(body, list)
     assert len(body) == 1
-    assert "image_url" in body[0]
+    assert "image_name" in body[0]
+    assert body[0]["image_name"].startswith("images/")
     assert "image_signed_url" in body[0]
-    assert body[0]["image_url"].startswith("http")
     assert isinstance(body[0]["image_signed_url"], str)
 
 
@@ -1267,9 +1267,9 @@ def test_upload_multiple_images_success(client):
     assert isinstance(body, list)
     assert len(body) == 3
     for item in body:
-        assert "image_url" in item
+        assert "image_name" in item
+        assert item["image_name"].startswith("images/")
         assert "image_signed_url" in item
-        assert item["image_url"].startswith("http")
         assert isinstance(item["image_signed_url"], str)
 
 
@@ -1544,23 +1544,18 @@ def test_pager_response_includes_image_signed_url(client):
 
 
 def test_common_get_signed_url_function(monkeypatch):
-    """Test common get_signed_url_from_public_url: returns generated URL when active, empty string when not (no dummy URLs)."""
-    from app.services.storage_service import storage_service, get_signed_url_from_public_url
+    """Test common get_signed_url: returns generated URL when active, empty string when not."""
+    from app.services.storage_service import storage_service, get_signed_url
 
     # None and empty inputs return empty string
-    assert get_signed_url_from_public_url(None) == ""
-    assert get_signed_url_from_public_url("") == ""
-    assert get_signed_url_from_public_url("   ") == ""
+    assert get_signed_url(None) == ""
+    assert get_signed_url("") == ""
+    assert get_signed_url("   ") == ""
 
-    # When GCS client is not active/available: returns empty string (NOT dummy fallback)
-    url = "https://storage.googleapis.com/my-bucket/images/sample.jpg"
-    res = get_signed_url_from_public_url(url)
-    assert res == ""
-
-    # When GCS signing IS active and working: returns the generated signed URL
+    # When GCS signing is active and working: returns the generated signed URL
     class MockBlob:
         def generate_signed_url(self, **kwargs):
-            return "https://storage.googleapis.com/my-bucket/images/sample.jpg?X-Goog-Signature=valid123"
+            return "https://storage.googleapis.com/test-bucket/images/sample.jpg?X-Goog-Signature=valid123"
 
     class MockBucket:
         def blob(self, name):
@@ -1570,20 +1565,74 @@ def test_common_get_signed_url_function(monkeypatch):
         def bucket(self, name):
             return MockBucket()
 
+    monkeypatch.setattr(storage_service, "bucket", None)
     monkeypatch.setattr(storage_service, "_get_client", lambda: MockClient())
-    signed = get_signed_url_from_public_url(url)
-    assert signed == "https://storage.googleapis.com/my-bucket/images/sample.jpg?X-Goog-Signature=valid123"
-
+    signed = get_signed_url("images/sample.jpg")
+    assert signed == "https://storage.googleapis.com/test-bucket/images/sample.jpg?X-Goog-Signature=valid123"
 
 
 def test_gcp_storage_module_exports():
     """Test that app.services.gcp_storage correctly exports GCPStorageService and helpers."""
-    from app.services.gcp_storage import GCPStorageService, generate_signed_url, storage_service
+    from app.services.gcp_storage import (
+        GCPStorageService,
+        generate_signed_url,
+        get_signed_url,
+        storage_service,
+    )
 
     svc = GCPStorageService(bucket_name="custom-bucket")
     assert svc.bucket_name == "custom-bucket"
     assert callable(generate_signed_url)
+    assert callable(get_signed_url)
     assert storage_service is not None
+
+
+def test_pager_with_direct_image_names(client):
+    """Test that storing image names directly (e.g. 'images/direct1.png') generates valid signed URLs without public URLs."""
+    payload = _minimal_pager()
+    payload["image_url"] = "images/direct_banner.png"
+    payload["pillars"] = [
+        {
+            "pillar_number": 1,
+            "pillar_name": "Digital Execution",
+            "initiatives": [
+                {
+                    "initiative_number": 1,
+                    "initiative_description": "First Initiative with direct names",
+                    "images": [
+                        "images/direct_img1.png",
+                        "images/direct_img2.jpg",
+                    ],
+                }
+            ],
+        }
+    ]
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["image_url"] == "images/direct_banner.png"
+    assert data["image_signed_url"] != ""
+    init = data["pillars"][0]["initiatives"][0]
+    assert init["images"] == ["images/direct_img1.png", "images/direct_img2.jpg"]
+    assert len(init["image_signed_url"]) == 2
+    for signed in init["image_signed_url"]:
+        assert isinstance(signed, str)
+        assert signed != ""
+
+
+def test_get_signed_url_direct_name():
+    """Test get_signed_url handles both direct blob names and legacy URLs."""
+    from app.services.storage_service import get_signed_url
+
+    # None and empty
+    assert get_signed_url(None) == ""
+    assert get_signed_url("") == ""
+    assert get_signed_url("   ") == ""
+
+    # Direct blob name uses mock bucket without urlparse errors
+    res = get_signed_url("images/sample_direct.png")
+    assert isinstance(res, str)
+
 
 
 

@@ -10,7 +10,6 @@ import uuid
 import logging
 from typing import List, Optional
 from datetime import timedelta
-from urllib.parse import urlparse, unquote
 from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile, status
 from google.cloud import storage
@@ -199,12 +198,9 @@ class StorageService:
                     detail=f"Cloud Storage upload failed for file {file.filename}: {e}",
                 )
 
-            bucket_name = self.bucket_name or "storage"
-            public_url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"
-
             items.append(
                 ImageUploadItem(
-                    image_url=public_url,
+                    image_name=blob_name,
                     image_signed_url=signed_url,
                 )
             )
@@ -215,52 +211,26 @@ class StorageService:
         """Uploads a single image file (backwards compatibility)."""
         return await self.upload_images([file])
 
-    def get_signed_url_from_public_url(
-        self, public_url: Optional[str], expiration_hours: int = 24
+    def get_signed_url(
+        self,
+        image_name: Optional[str],
+        expiration_hours: int = 24,
     ) -> str:
         """
-        Extracts the blob name from a public GCS URL and generates a signed URL.
-        Reuses cached credentials and bucket connection for sub-millisecond response time across 45 images.
+        Generates a signed URL directly from an image/blob name (e.g. 'images/abc.png').
         """
-        if not public_url:
+        if not image_name:
             return ""
 
-        url_str = str(public_url).strip()
-        if not url_str:
+        clean_name = str(image_name).strip()
+        if not clean_name:
             return ""
 
-        try:
-            parsed = urlparse(url_str)
-            path = unquote(parsed.path.lstrip("/"))
-
-            bucket_name = self.bucket_name
-            if "storage.googleapis.com" in parsed.netloc:
-                if parsed.netloc == "storage.googleapis.com":
-                    parts = path.split("/", 1)
-                    if len(parts) == 2:
-                        bucket_name = parts[0]
-                        blob_name = parts[1]
-                    else:
-                        blob_name = path
-                else:
-                    subdomain = parsed.netloc.replace(".storage.googleapis.com", "")
-                    if subdomain:
-                        bucket_name = subdomain
-                    blob_name = path
-            else:
-                return ""
-
-            if not blob_name or not bucket_name:
-                return ""
-
-            return self.generate_signed_url(
-                bucket_name=bucket_name,
-                blob_name=blob_name,
-                expiration=timedelta(hours=expiration_hours),
-            )
-        except Exception as e:
-            logger.warning(f"Error generating signed URL from public URL '{url_str}': {e}")
-            return ""
+        return self.generate_signed_url(
+            bucket_name=self.bucket_name or "",
+            blob_name=clean_name,
+            expiration=timedelta(hours=expiration_hours),
+        )
 
 
 storage_service = StorageService()
@@ -271,12 +241,12 @@ def generate_signed_url(bucket_name: str, blob_name: str) -> str:
     return storage_service.generate_signed_url(bucket_name, blob_name)
 
 
-def get_signed_url_from_public_url(
-    public_url: Optional[str], expiration_hours: int = 24
+def get_signed_url(
+    image_name: Optional[str], expiration_hours: int = 24
 ) -> str:
-    """Common function to extract image name from public URL and return a signed URL."""
-    return storage_service.get_signed_url_from_public_url(
-        public_url, expiration_hours=expiration_hours
+    """Convenience function to generate signed URL directly from image name."""
+    return storage_service.get_signed_url(
+        image_name, expiration_hours=expiration_hours
     )
 
 

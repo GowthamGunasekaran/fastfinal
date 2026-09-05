@@ -9,7 +9,7 @@ from app.services.storage_service import (
     GCPStorageService,
     storage_service,
     generate_signed_url,
-    get_signed_url_from_public_url,
+    get_signed_url,
 )
 
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     "GCPStorageService",
     "storage_service",
     "generate_signed_url",
-    "get_signed_url_from_public_url",
+    "get_signed_url",
 ]

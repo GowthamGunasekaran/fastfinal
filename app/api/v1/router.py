@@ -289,7 +289,7 @@ def list_campaigns(
     "/upload",
     response_model=List[ImageUploadItem],
     status_code=status.HTTP_201_CREATED,
-    summary="Upload image(s) to GCP Cloud Storage and get public and signed URLs (up to 3 files)",
+    summary="Upload image(s) to GCP Cloud Storage and get image names and signed URLs (up to 3 files)",
     tags=["Upload"],
 )
 async def upload_images(
@@ -297,7 +297,7 @@ async def upload_images(
     file: Optional[UploadFile] = File(None, description="Single image file to upload (backwards compatibility)"),
 ):
     """
-    Upload image(s) to GCP Cloud Storage and return an array of public URLs.
+    Upload image(s) to GCP Cloud Storage and return an array of image names and signed URLs.
     Accepts up to 3 image files in a single request.
     """
     upload_list: List[UploadFile] = []
