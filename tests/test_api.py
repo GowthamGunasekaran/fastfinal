@@ -1575,29 +1575,6 @@ def test_common_get_signed_url_function(monkeypatch):
     assert signed == "https://storage.googleapis.com/my-bucket/images/sample.jpg?X-Goog-Signature=valid123"
 
 
-def test_upload_image_route_alias(client):
-    """Test /api/v1/upload-image alias endpoint."""
-    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
-    files = {"file": ("alias_test.png", fake_png, "image/png")}
-    resp = client.post("/api/v1/upload-image", files=files)
-    assert resp.status_code == 201
-    body = resp.json()
-    assert isinstance(body, list)
-    assert len(body) == 1
-    assert "image_url" in body[0]
-
-
-def test_upload_image_root_endpoint(client):
-    """Test root /upload-image endpoint matching screenshot."""
-    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4"
-    files = {"file": ("root_test.png", fake_png, "image/png")}
-    resp = client.post("/upload-image", files=files)
-    assert resp.status_code == 201
-    body = resp.json()
-    assert isinstance(body, list)
-    assert len(body) == 1
-    assert "image_url" in body[0]
-
 
 def test_gcp_storage_module_exports():
     """Test that app.services.gcp_storage correctly exports GCPStorageService and helpers."""

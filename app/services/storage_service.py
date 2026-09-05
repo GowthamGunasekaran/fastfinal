@@ -40,16 +40,16 @@ class StorageService:
         self.bucket = None
         self.credentials = None
         self._request = Request()
-        self.initialize_connection()
+        self._initialized = False
 
     def initialize_connection(self):
         """
         Establishes and caches the GCP Storage client, bucket connection,
         and auth credentials globally so subsequent calls don't incur connection overhead.
         """
-        if os.environ.get("TESTING") == "1":
+        if self._initialized:
             return
-
+        self._initialized = True
         try:
             if self.project_id:
                 self.client = storage.Client(project=self.project_id)
@@ -68,7 +68,7 @@ class StorageService:
 
     def _get_client(self):
         """Returns the active GCS client, reconnecting if needed."""
-        if self.client is None and os.environ.get("TESTING") != "1":
+        if not self._initialized:
             self.initialize_connection()
         return self.client
 
@@ -87,7 +87,7 @@ class StorageService:
         Refreshes and returns the GCP access token.
         Token is valid for 1 hour; only refreshes when expired to prevent latency.
         """
-        if os.environ.get("TESTING") == "1" or not self.service_account_email:
+        if not self.service_account_email:
             return None
 
         try:
@@ -130,7 +130,7 @@ class StorageService:
                         access_token=token,
                     )
 
-            # Fallback for local / mocked testing
+            # Fallback for local / standard credentials
             return blob.generate_signed_url(
                 version="v4",
                 expiration=expiration,
@@ -157,9 +157,7 @@ class StorageService:
             )
 
         bucket = self._get_bucket()
-        is_testing = os.environ.get("TESTING") == "1"
-
-        if not bucket and not is_testing:
+        if not bucket:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="GCP Storage bucket connection is not available.",
@@ -188,18 +186,18 @@ class StorageService:
             ext = os.path.splitext(file.filename)[1] or ".png"
             blob_name = f"images/{uuid.uuid4().hex}{ext}"
 
-            signed_url = ""
-            if bucket and not is_testing:
-                try:
-                    blob = bucket.blob(blob_name)
-                    blob.upload_from_string(contents, content_type=content_type)
-                    signed_url = self.generate_signed_url(self.bucket_name, blob_name)
-                except Exception as e:
-                    logger.error(f"GCS upload failed for file {file.filename}: {e}")
-                    raise HTTPException(
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail=f"Cloud Storage upload failed for file {file.filename}: {e}",
-                    )
+            try:
+                blob = bucket.blob(blob_name)
+                blob.upload_from_string(contents, content_type=content_type)
+                signed_url = self.generate_signed_url(self.bucket_name, blob_name)
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"GCS upload failed for file {file.filename}: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Cloud Storage upload failed for file {file.filename}: {e}",
+                )
 
             bucket_name = self.bucket_name or "storage"
             public_url = f"https://storage.googleapis.com/{bucket_name}/{blob_name}"

@@ -65,3 +65,29 @@ def client(db):
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_storage_for_tests(monkeypatch):
+    """
+    Mock GCS storage bucket for test suite to run in isolation without network calls.
+    Allows testing upload validation, formatting, and signed URLs cleanly.
+    """
+    from unittest.mock import MagicMock
+    from app.services.storage_service import storage_service
+
+    mock_bucket = MagicMock()
+    mock_blob = MagicMock()
+    mock_bucket.blob.return_value = mock_blob
+    mock_blob.generate_signed_url.return_value = "https://storage.googleapis.com/test-bucket/images/test.png?signed=true"
+
+    orig_bucket = storage_service.bucket
+    orig_bucket_name = storage_service.bucket_name
+    storage_service.bucket = mock_bucket
+    storage_service.bucket_name = "test-bucket"
+
+    yield
+
+    storage_service.bucket = orig_bucket
+    storage_service.bucket_name = orig_bucket_name
+

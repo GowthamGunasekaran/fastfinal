@@ -5,8 +5,7 @@ FastAPI application entry point.
 import os
 from contextlib import asynccontextmanager
 
-from typing import Optional, List
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -20,8 +19,6 @@ from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign  # no
 
 # API router
 from app.api.v1.router import router
-from app.schemas.storage_schema import ImageUploadItem
-from app.services.storage_service import storage_service
 
 
 @asynccontextmanager
@@ -84,24 +81,4 @@ def health_check():
     """Service health check endpoint."""
     return {"status": "ok", "service": "National One-Pager API"}
 
-
-@app.post(
-    "/upload-image",
-    response_model=List[ImageUploadItem],
-    status_code=201,
-    tags=["Upload"],
-    summary="Root upload image endpoint",
-)
-async def upload_image_root(
-    files: Optional[List[UploadFile]] = File(None),
-    file: Optional[UploadFile] = File(None),
-):
-    upload_list = []
-    if files:
-        upload_list.extend(files)
-    if file:
-        upload_list.append(file)
-    if not upload_list:
-        raise HTTPException(status_code=400, detail="No file selected")
-    return await storage_service.upload_images(files=upload_list)
 
