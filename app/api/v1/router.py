@@ -292,6 +292,13 @@ def list_campaigns(
     summary="Upload image(s) to GCP Cloud Storage and get public and signed URLs (up to 3 files)",
     tags=["Upload"],
 )
+@router.post(
+    "/upload-image",
+    response_model=List[ImageUploadItem],
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload image(s) alias",
+    tags=["Upload"],
+)
 async def upload_images(
     files: Optional[List[UploadFile]] = File(None, description="Array of image files to upload (up to 3 files)"),
     file: Optional[UploadFile] = File(None, description="Single image file to upload (backwards compatibility)"),
