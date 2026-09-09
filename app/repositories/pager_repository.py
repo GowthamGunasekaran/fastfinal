@@ -59,6 +59,8 @@ class PagerRepository:
         category: Optional[list] = None,
         campaign: Optional[list] = None,
         campaign_focus: Optional[list] = None,
+        business_group: Optional[list] = None,
+        year: Optional[list] = None,
         pager_type: Optional[list] = None,
         status: Optional[list] = None,
         skip: int = 0,
@@ -96,6 +98,10 @@ class PagerRepository:
         if combined_campaigns:
             stmt = stmt.where(Pager.campaign_focus.in_(combined_campaigns))
 
+        if business_group:
+            stmt = stmt.where(Pager.business_group.in_(business_group))
+        if year:
+            stmt = stmt.where(Pager.year.in_(year))
         if pager_type:
             stmt = stmt.where(Pager.pager_type.in_(pager_type))
 

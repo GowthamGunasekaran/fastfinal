@@ -45,6 +45,8 @@ class MetadataService:
             pk3_list = meta.pillar_kpi_3 if isinstance(meta.pillar_kpi_3, list) else []
             pk4_list = meta.pillar_kpi_4 if isinstance(meta.pillar_kpi_4, list) else []
             pk5_list = meta.pillar_kpi_5 if isinstance(meta.pillar_kpi_5, list) else []
+            bg_list = meta.business_group if isinstance(meta.business_group, list) else []
+            yr_list = meta.year if isinstance(meta.year, list) else []
             campaign_list = campaigns_by_market.get(m_name, [])
 
             response[m_name] = MarketMetadataItem(
@@ -58,6 +60,8 @@ class MetadataService:
                 pillar_kpi_3=pk3_list,
                 pillar_kpi_4=pk4_list,
                 pillar_kpi_5=pk5_list,
+                business_group=bg_list,
+                year=yr_list,
             )
 
         # Include any markets that might only be in campaigns table if not already populated
@@ -74,6 +78,8 @@ class MetadataService:
                     pillar_kpi_3=[],
                     pillar_kpi_4=[],
                     pillar_kpi_5=[],
+                    business_group=[],
+                    year=[],
                 )
 
         return response
@@ -113,6 +119,8 @@ class MetadataService:
         pillar_kpi_3 = _clean_list(payload.pillar_kpi_3)
         pillar_kpi_4 = _clean_list(payload.pillar_kpi_4)
         pillar_kpi_5 = _clean_list(payload.pillar_kpi_5)
+        business_group = _clean_list(payload.business_group)
+        year = _clean_list(payload.year)
 
         if campaigns:
             existing_campaigns = campaign_repository.get_campaign_names_by_market(
@@ -141,6 +149,8 @@ class MetadataService:
             pillar_kpi_3=pillar_kpi_3,
             pillar_kpi_4=pillar_kpi_4,
             pillar_kpi_5=pillar_kpi_5,
+            business_group=business_group,
+            year=year,
         )
         db.commit()
         db.refresh(metadata_record)

@@ -30,6 +30,8 @@ class Pager(Base):
     channel: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     campaign_focus: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    business_group: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    year: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     business_outcome_statement: Mapped[Optional[str]] = mapped_column(
         String(1000), nullable=True

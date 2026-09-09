@@ -52,6 +52,8 @@ class MetadataRepository:
         pillar_kpi_3: Optional[List[str]] = None,
         pillar_kpi_4: Optional[List[str]] = None,
         pillar_kpi_5: Optional[List[str]] = None,
+        business_group: Optional[List[str]] = None,
+        year: Optional[List[str]] = None,
     ) -> Metadata:
         acc_team = accountable_team if accountable_team is not None else []
         pk1 = pillar_kpi_1 if pillar_kpi_1 is not None else []
@@ -59,6 +61,8 @@ class MetadataRepository:
         pk3 = pillar_kpi_3 if pillar_kpi_3 is not None else []
         pk4 = pillar_kpi_4 if pillar_kpi_4 is not None else []
         pk5 = pillar_kpi_5 if pillar_kpi_5 is not None else []
+        bg = business_group if business_group is not None else []
+        yr = year if year is not None else []
 
         existing = self.get_by_market(db, market)
         if existing:
@@ -71,6 +75,8 @@ class MetadataRepository:
             existing.pillar_kpi_3 = pk3
             existing.pillar_kpi_4 = pk4
             existing.pillar_kpi_5 = pk5
+            existing.business_group = bg
+            existing.year = yr
             db.flush()
             return existing
         else:
@@ -85,6 +91,8 @@ class MetadataRepository:
                 pillar_kpi_3=pk3,
                 pillar_kpi_4=pk4,
                 pillar_kpi_5=pk5,
+                business_group=bg,
+                year=yr,
             )
             db.add(meta)
             db.flush()

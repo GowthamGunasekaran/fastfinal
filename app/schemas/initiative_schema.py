@@ -20,6 +20,8 @@ class InitiativeCreate(BaseModel):
     unit: Optional[str] = None
     week_start: Optional[str] = None
     week_end: Optional[str] = None
+    week_start_number: Optional[str] = None
+    week_end_number: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
     images: Optional[List[str]] = Field(default_factory=list)
@@ -45,6 +47,8 @@ class InitiativeUpdate(BaseModel):
     unit: Optional[str] = None
     week_start: Optional[str] = None
     week_end: Optional[str] = None
+    week_start_number: Optional[str] = None
+    week_end_number: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
     images: Optional[List[str]] = None
@@ -73,6 +77,8 @@ class InitiativeOut(BaseModel):
     unit: Optional[str] = None
     week_start: Optional[str] = None
     week_end: Optional[str] = None
+    week_start_number: Optional[str] = None
+    week_end_number: Optional[str] = None
     guidelines: Optional[str] = None
     checklist_compliance_notes: Optional[str] = None
     images: Optional[List[str]] = None

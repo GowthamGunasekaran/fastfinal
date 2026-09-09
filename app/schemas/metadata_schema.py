@@ -20,6 +20,8 @@ class MarketMetadataItem(BaseModel):
     pillar_kpi_3: List[str] = []
     pillar_kpi_4: List[str] = []
     pillar_kpi_5: List[str] = []
+    business_group: List[str] = []
+    year: List[str] = []
 
 
 class MetadataUpsertRequest(BaseModel):
@@ -37,6 +39,8 @@ class MetadataUpsertRequest(BaseModel):
     pillar_kpi_3: List[str] = []
     pillar_kpi_4: List[str] = []
     pillar_kpi_5: List[str] = []
+    business_group: List[str] = []
+    year: List[str] = []
 
 
 class MetadataOut(BaseModel):
@@ -52,6 +56,8 @@ class MetadataOut(BaseModel):
     pillar_kpi_3: List[str] = []
     pillar_kpi_4: List[str] = []
     pillar_kpi_5: List[str] = []
+    business_group: List[str] = []
+    year: List[str] = []
 
     model_config = {"from_attributes": True}
 
@@ -73,6 +79,8 @@ class MetadataFilterRequest(BaseModel):
     pillar_kpi_3: Optional[List[str]] = []
     pillar_kpi_4: Optional[List[str]] = []
     pillar_kpi_5: Optional[List[str]] = []
+    business_group: Optional[List[str]] = []
+    year: Optional[List[str]] = []
 
 
 # Type alias for dictionary response mapping market -> MarketMetadataItem

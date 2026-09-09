@@ -52,6 +52,8 @@ class PillarInitiative(Base):
     unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     week_start: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     week_end: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    week_start_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    week_end_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     guidelines: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
     checklist_compliance_notes: Mapped[Optional[str]] = mapped_column(
         String(2000), nullable=True

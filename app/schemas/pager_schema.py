@@ -20,6 +20,8 @@ class PagerCreate(BaseModel):
     channel: Optional[str] = None
     category: Optional[str] = None
     campaign_focus: Optional[str] = None
+    business_group: Optional[str] = None
+    year: Optional[str] = None
     business_outcome_statement: Optional[str] = None
     scoring_mode: ScoringMode = ScoringMode.UNWEIGHTED
     status: PagerStatus = PagerStatus.DRAFT
@@ -40,6 +42,8 @@ class PagerUpdate(BaseModel):
     channel: Optional[str] = None
     category: Optional[str] = None
     campaign_focus: Optional[str] = None
+    business_group: Optional[str] = None
+    year: Optional[str] = None
     business_outcome_statement: Optional[str] = None
     scoring_mode: Optional[ScoringMode] = None
     status: Optional[PagerStatus] = None
@@ -67,6 +71,8 @@ class PagerOut(BaseModel):
     channel: Optional[str] = None
     category: Optional[str] = None
     campaign_focus: Optional[str] = None
+    business_group: Optional[str] = None
+    year: Optional[str] = None
     business_outcome_statement: Optional[str] = None
     scoring_mode: ScoringMode
     status: PagerStatus
@@ -94,6 +100,8 @@ class PagerSummary(BaseModel):
     channel: Optional[str] = None
     category: Optional[str] = None
     campaign_focus: Optional[str] = None
+    business_group: Optional[str] = None
+    year: Optional[str] = None
     business_outcome_statement: Optional[str] = None
     scoring_mode: ScoringMode
     status: PagerStatus
@@ -124,6 +132,8 @@ class FetchAllPagersRequest(BaseModel):
     category: Optional[List[str]] = Field(default_factory=list)
     campaign: Optional[List[str]] = Field(default_factory=list)
     campaign_focus: Optional[List[str]] = Field(default_factory=list)
+    business_group: Optional[List[str]] = Field(default_factory=list)
+    year: Optional[List[str]] = Field(default_factory=list)
     pager_type: Optional[List[str]] = Field(default_factory=list)
     status: Optional[List[str]] = Field(default_factory=list)
 
