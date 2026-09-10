@@ -25,11 +25,13 @@ from app.schemas.metadata_schema import (
 from app.schemas.track_schema import UpdateTrackRequest, UpdateTrackResponse
 from app.schemas.campaign_schema import CampaignCreate, CampaignOut, CampaignListResponse
 from app.schemas.storage_schema import ImageUploadItem, ImageUploadResponse
+from app.schemas.pager_log_schema import PagerLogOut
 from app.services.pager_service import pager_service
 from app.services.metadata_service import metadata_service
 from app.services.track_service import track_service
 from app.services.campaign_service import campaign_service
 from app.services.storage_service import storage_service
+from app.services.pager_log_service import pager_log_service
 from app.utils.enums import PagerStatus
 
 router = APIRouter(prefix="/api/v1")
@@ -315,5 +317,28 @@ async def upload_images(
     return await storage_service.upload_images(files=upload_list)
 
 
+# ==========================================================================
+# PAGER LOGS ENDPOINT
+# ==========================================================================
 
+@router.get(
+    "/pager-logs",
+    response_model=List[PagerLogOut],
+    summary="Get audit logs for a user by email",
+    tags=["Pager Logs"],
+)
+def get_pager_logs(
+    email: str = Query(..., description="Email / user ID to fetch logs for"),
+    limit: int = Query(10, ge=1, le=500, description="Number of recent logs to return (default 10)"),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch pager audit logs for a specific user (email).
+
+    Matches rows where `created_by` OR `last_updated_by` equals the given email.
+    Results are ordered by most recent first.
+    - **email**: required — the user's email / ID.
+    - **limit**: optional, default 10, max 500.
+    """
+    return pager_log_service.get_logs_by_email(db, email=email, limit=limit)
 

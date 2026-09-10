@@ -32,6 +32,7 @@ from app.utils.validators import (
     validate_initiative_count,
     validate_weighted_total,
 )
+from app.services.pager_log_service import pager_log_service
 
 
 class PagerService:
@@ -129,6 +130,9 @@ class PagerService:
                 initiative_repository.create(db, initiative)
 
         db.commit()
+        # Write audit log for creation
+        pager_log_service.write_create_log(db, pager, actor_email=pager.created_by)
+        db.commit()
         # Reload with relationships
         return pager_repository.get_by_id(db, pager.pager_id)
 
@@ -205,6 +209,8 @@ class PagerService:
         if payload.pillars is not None:
             self._sync_pillars(db, pager, payload.pillars)
 
+        # Write audit log before committing
+        pager_log_service.write_update_log(db, pager, actor_email=payload.updated_by)
         db.commit()
         return pager_repository.get_by_id(db, pager.pager_id)
 
@@ -383,6 +389,8 @@ class PagerService:
         pager.updated_by = updated_by
         pager.updated_at = utcnow()
 
+        # Write audit log for status change before committing
+        pager_log_service.write_status_log(db, pager, new_status=new_status, actor_email=updated_by)
         db.commit()
         return pager_repository.get_by_id(db, pager.pager_id)
 

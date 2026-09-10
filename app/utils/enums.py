@@ -17,3 +17,12 @@ class PriorityLevel(str, Enum):
     P1 = "P1"
     P2 = "P2"
     P3 = "P3"
+
+
+class PagerAction(str, Enum):
+    """Action label stored in pager_log. Reflects the lifecycle event."""
+    CREATE = "CREATE"
+    EDITED = "EDITED"
+    DELETED = "DELETED"
+    ARCHIVED = "ARCHIVED"
+    DRAFTED = "DRAFTED"
