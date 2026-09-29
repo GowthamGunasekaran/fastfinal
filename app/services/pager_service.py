@@ -82,6 +82,7 @@ class PagerService:
             pager_type=payload.pager_type,
             image_url=payload.image_url,
             created_by=payload.created_by,
+            created_by_role=payload.created_by_role,
             published_by=published_by,
             published_at=published_at,
             created_at=utcnow(),

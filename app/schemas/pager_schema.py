@@ -29,6 +29,7 @@ class PagerCreate(BaseModel):
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
     created_by: Optional[str] = None
+    created_by_role: Optional[str] = None
     published_by: Optional[str] = None
     published_at: Optional[datetime] = None
     pillars: Optional[List[PillarCreate]] = Field(default_factory=list)
@@ -51,6 +52,7 @@ class PagerUpdate(BaseModel):
     pager_type: Optional[str] = None
     image_url: Optional[str] = None
     updated_by: Optional[str] = None
+    created_by_role: Optional[str] = None
     published_by: Optional[str] = None
     published_at: Optional[datetime] = None
     pillars: Optional[List[PillarUpdate]] = None
@@ -81,6 +83,7 @@ class PagerOut(BaseModel):
     image_url: Optional[str] = None
     image_signed_url: Optional[str] = ""
     created_by: Optional[str] = None
+    created_by_role: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_by: Optional[str] = None
     updated_at: Optional[datetime] = None
@@ -110,6 +113,7 @@ class PagerSummary(BaseModel):
     image_url: Optional[str] = None
     image_signed_url: Optional[str] = ""
     created_by: Optional[str] = None
+    created_by_role: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_by: Optional[str] = None
     updated_at: Optional[datetime] = None

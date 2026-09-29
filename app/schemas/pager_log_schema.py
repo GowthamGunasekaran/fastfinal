@@ -16,6 +16,7 @@ class PagerLogOut(BaseModel):
 
     # Actor fields
     created_by: Optional[str] = None
+    created_by_role: Optional[str] = None
     last_updated_by: Optional[str] = None
 
     # Timestamps

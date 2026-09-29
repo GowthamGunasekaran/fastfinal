@@ -1634,6 +1634,40 @@ def test_get_signed_url_direct_name():
     assert isinstance(res, str)
 
 
+def test_create_pager_with_created_by_role(client, db):
+    """Test POST /api/v1/pagers handles created_by_role and persists to pager & pager_log."""
+    payload = _minimal_pager()
+    payload["created_by"] = "test-user@example.com"
+    payload["created_by_role"] = "Admin"
+
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["created_by_role"] == "Admin"
+    pager_id = data["pager_id"]
+
+    # Verify pager fetch
+    get_resp = client.get(f"/api/v1/pagers/{pager_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["created_by_role"] == "Admin"
+
+    # Verify pager_log table
+    from app.models.pager_log import PagerLog
+    log = db.query(PagerLog).filter(PagerLog.pager_id == pager_id).first()
+    assert log is not None
+    assert log.created_by_role == "Admin"
+
+
+def test_create_pager_without_created_by_role(client):
+    """Test created_by_role is non-mandatory and defaults to None."""
+    payload = _minimal_pager()
+    resp = client.post("/api/v1/pagers", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data.get("created_by_role") is None
+
+
+
 
 
 

@@ -55,6 +55,7 @@ class Pager(Base):
 
     # Audit fields
     created_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    created_by_role: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=True
     )

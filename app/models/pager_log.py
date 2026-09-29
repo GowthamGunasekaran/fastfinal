@@ -26,6 +26,7 @@ class PagerLog(Base):
 
     # Who performed the action
     created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_by_role: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_updated_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
 
     # Timestamps
