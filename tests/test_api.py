@@ -1667,6 +1667,138 @@ def test_create_pager_without_created_by_role(client):
     assert data.get("created_by_role") is None
 
 
+def test_action_log_creation(db):
+    """Test creating an ActionLog record with GUID id, pager_id, user_email, role, market, date_time, and action."""
+    from app.models.action_log import ActionLog
+    from app.utils.helpers import generate_uuid
+
+    test_pager_id = generate_uuid()
+    action_log = ActionLog(
+        pager_id=test_pager_id,
+        user_email="auditor@example.com",
+        role="Admin",
+        market="India",
+        action="Created new national one-pager template"
+    )
+    db.add(action_log)
+    db.commit()
+
+    saved = db.query(ActionLog).filter(ActionLog.id == action_log.id).first()
+    assert saved is not None
+    assert saved.pager_id == test_pager_id
+    assert saved.user_email == "auditor@example.com"
+    assert saved.role == "Admin"
+    assert saved.market == "India"
+    assert saved.action == "Created new national one-pager template"
+    assert saved.date_time is not None
+
+
+def test_api_record_login_log(client):
+    """Test POST /api/v1/user-tracking/login-log endpoint."""
+    resp = client.post(
+        "/api/v1/user-tracking/login-log",
+        json={"user_email": "john.doe@example.com", "role": "National Leader"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] is not None
+    assert data["user_email"] == "john.doe@example.com"
+    assert data["role"] == "National Leader"
+    assert data["login_time"] is not None
+
+
+def test_api_record_action_log(client):
+    """Test POST /api/v1/user-tracking/action-log with VIEW, EXPORT, DRAFT, TRACK."""
+    actions = ["VIEW", "EXPORT", "DRAFT", "TRACK"]
+    for act in actions:
+        resp = client.post(
+            "/api/v1/user-tracking/action-log",
+            json={
+                "pager_id": "test-guid-12345",
+                "user_email": "analyst@example.com",
+                "role": "Analyst",
+                "market": "India",
+                "action": act,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] is not None
+        assert data["action"] == act
+        assert data["pager_id"] == "test-guid-12345"
+        assert data["date_time"] is not None
+
+
+def test_api_user_details_csv_upsert(client):
+    """Test POST /api/v1/user-tracking/user-details/upload-csv with insert and update operations."""
+    # First upload: Insert 2 users
+    csv_content_1 = (
+        "email_id,role,market\n"
+        "alice@example.com,Admin,India\n"
+        "bob@example.com,Viewer,USA\n"
+    )
+    resp = client.post(
+        "/api/v1/user-tracking/user-details/upload-csv",
+        files={"file": ("users1.csv", csv_content_1.encode("utf-8"), "text/csv")},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_processed"] == 2
+    assert data["inserted"] == 2
+    assert data["updated"] == 0
+
+    # Second upload: Update alice (new role & market) and Insert charlie
+    csv_content_2 = (
+        "email_id,role,market\n"
+        "alice@example.com,SuperAdmin,Global\n"
+        "charlie@example.com,Editor,UK\n"
+    )
+    resp2 = client.post(
+        "/api/v1/user-tracking/user-details/upload-csv",
+        files={"file": ("users2.csv", csv_content_2.encode("utf-8"), "text/csv")},
+    )
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert data2["total_processed"] == 2
+    assert data2["inserted"] == 1
+    assert data2["updated"] == 1
+
+    # Check alice was updated
+    alice_record = next(u for u in data2["users"] if u["email"] == "alice@example.com")
+    assert alice_record["role"] == "SuperAdmin"
+    assert alice_record["market"] == "Global"
+
+
+def test_api_get_user_details(client):
+    """Test GET /api/v1/user-tracking/user-details by query param and path param."""
+    # Seed user via CSV upload
+    csv_content = (
+        "email_id,role,market\n"
+        "clara@example.com,Country Manager,Germany\n"
+    )
+    upload_resp = client.post(
+        "/api/v1/user-tracking/user-details/upload-csv",
+        files={"file": ("clara.csv", csv_content.encode("utf-8"), "text/csv")},
+    )
+    assert upload_resp.status_code == 200
+
+    # 1. Fetch via query param
+    resp = client.get("/api/v1/user-tracking/user-details?email=clara@example.com")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["email"] == "clara@example.com"
+    assert data["role"] == "Country Manager"
+    assert data["market"] == "Germany"
+    assert data["created_at"] is not None
+    assert data["last_updated_at"] is not None
+
+    # 2. Not found returns 404
+    resp_404 = client.get("/api/v1/user-tracking/user-details?email=nonexistent@example.com")
+    assert resp_404.status_code == 404
+
+
+
+
 
 
 

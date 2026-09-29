@@ -17,7 +17,7 @@ load_dotenv()
 from app.db import Base, DATABASE_URL
 
 # Import all models so Base.metadata contains all table definitions for --autogenerate
-from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog  # noqa: F401
+from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog, ActionLog, LoginLog, UserDetails  # noqa: F401
 
 # Alembic Config object
 config = context.config

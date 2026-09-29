@@ -31,7 +31,7 @@ TestSessionLocal = sessionmaker(
 def create_test_tables():
     """Create all tables once for the entire test session."""
     # Import models so they register with Base
-    from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog  # noqa
+    from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog, ActionLog, LoginLog, UserDetails  # noqa
     Base.metadata.create_all(bind=test_engine)
     yield
     Base.metadata.drop_all(bind=test_engine)

@@ -15,7 +15,7 @@ load_dotenv()
 from app.db import engine, Base
 
 # Import all models so SQLAlchemy registers them before create_all
-from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog  # noqa: F401
+from app.models import Pager, Pillar, PillarInitiative, Metadata, Campaign, PagerLog, ActionLog, LoginLog, UserDetails  # noqa: F401
 
 # API router
 from app.api.v1.router import router

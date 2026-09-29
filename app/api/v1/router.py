@@ -32,6 +32,15 @@ from app.services.track_service import track_service
 from app.services.campaign_service import campaign_service
 from app.services.storage_service import storage_service
 from app.services.pager_log_service import pager_log_service
+from app.schemas.user_tracking_schema import (
+    LoginLogCreate,
+    LoginLogOut,
+    ActionLogCreate,
+    ActionLogOut,
+    UserDetailsOut,
+    UserDetailsUploadResponse,
+)
+from app.services.user_tracking_service import user_tracking_service
 from app.utils.enums import PagerStatus
 
 router = APIRouter(prefix="/api/v1")
@@ -341,4 +350,75 @@ def get_pager_logs(
     - **limit**: optional, default 10, max 500.
     """
     return pager_log_service.get_logs_by_email(db, email=email, limit=limit)
+
+
+# ==========================================================================
+# USER TRACKING ENDPOINTS
+# ==========================================================================
+
+@router.post(
+    "/user-tracking/login-log",
+    response_model=LoginLogOut,
+    summary="Record a user login event",
+    tags=["User Tracking"],
+)
+def record_login_log(payload: LoginLogCreate, db: Session = Depends(get_db)):
+    """
+    Record a user login event into `login_log`.
+    Auto-populates GUID `id` and `login_time`.
+    """
+    return user_tracking_service.record_login(db, payload)
+
+
+@router.post(
+    "/user-tracking/action-log",
+    response_model=ActionLogOut,
+    summary="Record a user action event",
+    tags=["User Tracking"],
+)
+def record_action_log(payload: ActionLogCreate, db: Session = Depends(get_db)):
+    """
+    Record an action event into `action_log`.
+    Action can be VIEW, EXPORT, DRAFT, TRACK, or any free text.
+    Auto-populates GUID `id` and `date_time`.
+    """
+    return user_tracking_service.record_action(db, payload)
+
+
+@router.post(
+    "/user-tracking/user-details/upload-csv",
+    response_model=UserDetailsUploadResponse,
+    summary="Upload and upsert user profiles via CSV file",
+    tags=["User Tracking"],
+)
+async def upload_user_details_csv(
+    file: UploadFile = File(..., description="CSV file containing email_id, role, and market"),
+    db: Session = Depends(get_db),
+):
+    """
+    Upload a CSV file containing user details (`email_id` / `email`, `role`, `market`).
+    Performs upsert:
+    - Inserts new user if email does not exist.
+    - Updates role, market, and `last_updated_at` if email already exists.
+    """
+    return await user_tracking_service.upload_user_details_csv(db, file)
+
+
+@router.get(
+    "/user-tracking/user-details",
+    response_model=UserDetailsOut,
+    summary="Get user details by email",
+    tags=["User Tracking"],
+)
+def get_user_details(
+    email: str = Query(..., description="Email address of the user"),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch user details (email, role, market, created_at, last_updated_at)
+    by email.
+    """
+    return user_tracking_service.get_user_details(db, email=email)
+
+
 
